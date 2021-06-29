@@ -1,5 +1,6 @@
 # print out board each move and sleep for 300 so that people can watch
 # CAL is chutes and ladders
+# for sake of simplicity board will wrap to the right instead of switch back and forth
 
 """
 example board for chutes and ladders
@@ -21,7 +22,7 @@ class Board:
     turn = 0
     positions = []
 
-    def __init__(self, i, j, m, t, p):
+    def __init__(self, i, j, m, p):
         """
         example input looks like
         g = Board([ [0, 0, 0, 0, 0], [1, 2, 1, -1, 0], 
@@ -31,7 +32,7 @@ class Board:
         self.rows = j
         self.cols = i
         self.matrix = m
-        self.turn = t
+        self.turn = 0
         self.positions = p
 
 
@@ -47,7 +48,7 @@ class Board:
                         occupy = True
                 # only print number when no player is there
                 if not occupy:
-                    print(self.matrix[i][j])
+                    print(i)
 
 
     # move piece according to position stored in positions
@@ -55,7 +56,7 @@ class Board:
         for p in self.positions:
             if p == [player, i, j]:
                 # TODO: fix this and test vals
-                newi = 
+                newi = (value % self.cols) - 0
                 p = [player, newi, newj]
 
 
@@ -103,3 +104,6 @@ class Game:
 
 
 # need extensive planning
+g = Board(3, 3, [['@', 0, 0], [0, 0, 0], [0, 0, 0]], [['S', 3, 3], ['T', 1, 3]] )
+
+g.print_board()
