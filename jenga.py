@@ -1,169 +1,71 @@
-# 2x2 with lists
-
 import random
 
-
-""" faces are 
-# R green
-# U white
-# D yellow
-# F red 
-# B magenta
-# L blue
+howto = """
+This game mimics jenga by giving a 3x20 array for players to use.
+You can remove one piece each turn and it goes to the top but 
+some pieces are more risky based on a probability map.
+Target pieces by their height and direction using 2r, 2c, 2l
+for a piece on the second level on the right, center, and left
 """
-green = u"\u001b[32m#\u001b[0m"
-blue = u"\u001b[34m#\u001b[0m"
 
-red = u"\u001b[31m#\u001b[0m"
-magenta = u"\u001b[35m#\u001b[0m"
+class Jenga:
 
-yellow = u"\u001b[33m#\u001b[0m"
-white = u"\u001b[37m#\u001b[0m"
-
-
-# all corners
-A = ["RUF", [green, white, red] ]
-B = ["BUR", [magenta, white, green] ]
-C = ["LUB", [blue, white, magenta] ]
-D = ["FUL", [red, white, blue] ]
-E = ["FDR", [red, yellow, green] ]
-F = ["RDB", [green, yellow, magenta] ]
-G = ["BDL", [magenta, yellow, blue] ]
-H = ["LDF", [blue, yellow, red] ]
-
-# all face pieces
-U = []
-V = []
-W = []
-X = []
-Y = []
-Z = []
-
-# 0 for faces, 1 for colors
-def print_cube(i):
-    # B
-    print("   ", F[i][2], G[i][0], "         ", C[i][2], B[i][0])
-    print("   ", B[i][0], C[i][2], "         ", G[i][0], F[i][2])
-    print("")
-    # R U L D
-    print(B[i][2], " ", B[i][1], C[i][1], "  ", C[i][0], G[i][2], "  ", G[i][1], F[i][1], " ",  F[i][0])
-    print(A[i][0], " ", A[i][1], D[i][1], "  ", D[i][2], H[i][0], "  ", H[i][1], E[i][1], " ", E[i][2])
-    # F
-    print("")
-    print("   ", A[i][2], D[i][0], "         ", H[i][2], E[i][0])
-    print("   ", E[i][0], H[i][2], "         ", D[i][0], A[i][2])
-    print("")
-    print("")
+    def __init__(self):
+        self.height = 20
+        self.players = 1
+        self.tower = []
+        for i in range(20):
+            self.tower.append([1, 1, 1])
 
 
-
-# consider clockwise vs anticlockwise
-def permute(top, right, bottom, left):
-    return (right, bottom, left, top)
-
-
-
-def counterpermute(top, right, bottom, left):
-    return (left, top, right, bottom)
-
-
-refer = { "R": [A[1][0], E[1][2], F[1][0], B[1][2]] }
-
-
-# a copypasta mess but it works...
-def rotate(char):
-    # A E F B
-    if char == "R":
-        (A[1][0], E[1][2], F[1][0], B[1][2]) = permute(A[1][0], E[1][2], F[1][0], B[1][2])
-        (A[1][1], E[1][0], F[1][1], B[1][0]) = permute(A[1][1], E[1][0], F[1][1], B[1][0])
-        (A[1][2], E[1][1], F[1][2], B[1][1]) = permute(A[1][2], E[1][1], F[1][2], B[1][1])
-    elif char == "r":
-        (A[1][0], E[1][2], F[1][0], B[1][2]) = counterpermute(A[1][0], E[1][2], F[1][0], B[1][2])
-        (A[1][1], E[1][0], F[1][1], B[1][0]) = counterpermute(A[1][1], E[1][0], F[1][1], B[1][0])
-        (A[1][2], E[1][1], F[1][2], B[1][1]) = counterpermute(A[1][2], E[1][1], F[1][2], B[1][1])
-
-    # A B C D
-    elif char == "U":
-        (A[1][1], B[1][1], C[1][1], D[1][1]) = permute(A[1][1], B[1][1], C[1][1], D[1][1])
-        (A[1][0], B[1][0], C[1][0], D[1][0]) = permute(A[1][0], B[1][0], C[1][0], D[1][0])
-        (A[1][2], B[1][2], C[1][2], D[1][2]) = permute(A[1][2], B[1][2], C[1][2], D[1][2])
-    elif char == "u":
-        (A[1][1], B[1][1], C[1][1], D[1][1]) = counterpermute(A[1][1], B[1][1], C[1][1], D[1][1])
-        (A[1][0], B[1][0], C[1][0], D[1][0]) = counterpermute(A[1][0], B[1][0], C[1][0], D[1][0])
-        (A[1][2], B[1][2], C[1][2], D[1][2]) = counterpermute(A[1][2], B[1][2], C[1][2], D[1][2])
-
-    # A D H E
-    elif char == "F":
-        (A[1][2], D[1][0], H[1][2], E[1][0]) = permute(A[1][2], D[1][0], H[1][2], E[1][0])
-        (A[1][1], D[1][2], H[1][1], E[1][2]) = permute(A[1][1], D[1][2], H[1][1], E[1][2])
-        (A[1][0], D[1][1], H[1][0], E[1][1]) = permute(A[1][0], D[1][1], H[1][0], E[1][1])
-    elif char == "f":
-        (A[1][2], D[1][0], H[1][2], E[1][0]) = counterpermute(A[1][2], D[1][0], H[1][2], E[1][0])
-        (A[1][1], D[1][2], H[1][1], E[1][2]) = counterpermute(A[1][1], D[1][2], H[1][1], E[1][2])
-        (A[1][0], D[1][1], H[1][0], E[1][1]) = counterpermute(A[1][0], D[1][1], H[1][0], E[1][1])
-
-    # D C G H
-    elif char == "L":
-        (D[1][1], C[1][2], G[1][1], H[1][2]) = permute(D[1][1], C[1][2], G[1][1], H[1][2])
-        (D[1][2], C[1][0], G[1][2], H[1][0]) = permute(D[1][2], C[1][0], G[1][2], H[1][0])
-        (D[1][0], C[1][1], G[1][0], H[1][1]) = permute(D[1][0], C[1][1], G[1][0], H[1][1])
-    elif char == "l":
-        (D[1][1], C[1][2], G[1][1], H[1][2]) = counterpermute(D[1][1], C[1][2], G[1][1], H[1][2])
-        (D[1][2], C[1][0], G[1][2], H[1][0]) = counterpermute(D[1][2], C[1][0], G[1][2], H[1][0])
-        (D[1][0], C[1][1], G[1][0], H[1][1]) = counterpermute(D[1][0], C[1][1], G[1][0], H[1][1])
-
-    # E F G H
-    elif char == "D":
-        (E[1][0], F[1][0], G[1][0], H[1][0]) = permute(E[1][0], F[1][0], G[1][0], H[1][0])
-        (E[1][1], F[1][1], G[1][1], H[1][1]) = permute(E[1][1], F[1][1], G[1][1], H[1][1])
-        (E[1][2], F[1][2], G[1][2], H[1][2]) = permute(E[1][2], F[1][2], G[1][2], H[1][2])
-    elif char == "d":
-        (E[1][0], F[1][0], G[1][0], H[1][0]) = counterpermute(E[1][0], F[1][0], G[1][0], H[1][0])
-        (E[1][1], F[1][1], G[1][1], H[1][1]) = counterpermute(E[1][1], F[1][1], G[1][1], H[1][1])
-        (E[1][2], F[1][2], G[1][2], H[1][2]) = counterpermute(E[1][2], F[1][2], G[1][2], H[1][2])
-
-    # B F G C
-    elif char == "B":
-        (B[1][0], F[1][2], G[1][0], C[1][2]) = permute(B[1][0], F[1][2], G[1][0], C[1][2])
-        (B[1][1], F[1][0], G[1][1], C[1][0]) = permute(B[1][1], F[1][0], G[1][1], C[1][0])
-        (B[1][2], F[1][1], G[1][2], C[1][1]) = permute(B[1][2], F[1][1], G[1][2], C[1][1])
-    elif char == "b":
-        (B[1][0], F[1][2], G[1][0], C[1][2]) = counterpermute(B[1][0], F[1][2], G[1][0], C[1][2])
-        (B[1][1], F[1][0], G[1][1], C[1][0]) = counterpermute(B[1][1], F[1][0], G[1][1], C[1][0])
-        (B[1][2], F[1][1], G[1][2], C[1][1]) = counterpermute(B[1][2], F[1][1], G[1][2], C[1][1])
-
-
-
-
-def scramble(num = 10):
-    for i in range(num):
-        possible = ["U", "u", "R", "r", "F", "f", "D", "d", "L", "l", "B", "b"]
-        turn = random.choice(possible)
-        rotate(turn)
-
-
-
-def play():
-    print_cube(1)
-    scramble(5)
-    while(True):
-        print_cube(1)
-        call = input("next move: ")
-        if len(call) == 1:
-            rotate(call)
+    # val comes in the form 1c and needs to be converted
+    def remove_piece(self, val):
+        # needs to accept 1c  3r  40c and reject c3  ;ds'  6896985l  c  0  etc
+        if not isalpha(val[0]):
+            print("invalid")
+        h = int(val[0])
+        if h > self.height - 3:
+            print("invalid")
         else:
-            return 0
+            # remove
+            pass
 
 
-def change(er):
-    er[0] = "hello my beutiful world"
+    # place piece at top of tower
+    def add_piece(self):
+        if self.tower[0][2] == 1:
+            self.tower.insert(0, [1, 0, 0])
+            self.height = self.height + 1
+        elif self.tower[0][1] == 0:
+            self.tower[0][1] = 1
+        else:
+            self.tower[0][2] = 1
 
-p = [1, 2, 3]
 
-print(p)
-change(p)
-print(p)
-play()
+    def get_success(self):
+        pass
 
-# features to consider:
-# 3x3 mode, sudoku mode, solve, reset/set, undo
+
+    def print_tower(self):
+        for row in self.tower:
+            print("    ", row[0], row[1], row[2])
+        print("")
+        print("")
+
+
+    # simulate one turn of jenga with player or bot
+    def play_round(self):
+        pass
+
+
+# playtest
+print(howto)
+g = Jenga()
+g.print_tower()
+g.add_piece()
+g.print_tower()
+g.add_piece()
+g.print_tower()
+g.add_piece()
+g.print_tower()
+g.add_piece()
