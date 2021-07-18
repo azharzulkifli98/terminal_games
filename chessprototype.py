@@ -2,6 +2,10 @@
 
 # if im not mistaken...
 
+# priorities are as follows
+# checkmate > safe check > safe capture
+# > capture > safe threaten > safe advance > random
+
 # need a game object
 # need a board object
 # might need player object
