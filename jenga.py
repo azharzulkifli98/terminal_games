@@ -19,28 +19,46 @@ class Jenga:
 
 
     # needs to accept 1c  3r  40c and reject c3  ;ds'  6896985l  c  0  etc
-    def pick_piece(self, val):
-        if len(val) < 2:
-            print("invalid format, try again")
-            return False
-        else:
-            num = val[:-1]
-            char = val[-1]
-        
-        if char not in "rcl" or not num.isdigit():
-            print("invalid format, try again")
-            return False
-        else:
-            i = int(num)
-            if i > self.height - 4:
-                print("cannot pick from top 3 layers, try again")
-            if char == "l":
-                j = 0
-            elif char == "c":
-                j = 1
+    def pick_piece(self):
+        while True:
+            val = input("pick a piece from the tower: ")
+            if len(val) < 2:
+                print("invalid format, try again")
             else:
-                j = 2
-            return i, j
+                num = val[:-1]
+                char = val[-1]
+            
+            if char not in "rcl" or not num.isdigit():
+                print("invalid format, try again")
+            elif int(num) > self.height - 3:
+                print("not within tower range, try again")
+            else:
+                i = self.height - int(num)
+                if i > self.height - 4:
+                    print("cannot pick from top 3 layers, try again")
+                if char == "l":
+                    j = 0
+                elif char == "c":
+                    j = 1
+                else:
+                    j = 2
+                # cannot pick from empty spaces
+                if self.tower[i][j] == 0:
+                    print("no piece to remove, try again")
+                else:
+                    return i, j
+
+
+    # use this for bots turn, make it pick a random piece blindly
+    def auto_piece(self):
+        val = 0
+        print("Bot's turn...")
+        # cannot pick location with no piece
+        while val == 0:
+            i = random.randint(4, self.height - 1)
+            j = random.randint(0, 2)
+            val = self.tower[i][j]
+        return i, j
 
 
     # input validation is done with pick_piece()
@@ -67,11 +85,11 @@ class Jenga:
         if slice == [1, 1, 1]:
             return 100 > prob
         elif slice == [1, 0, 1]:
-            return 50 > prob
+            return 90 > prob
         elif slice == [1, 1, 0] or slice == [0, 1, 1]:
-            return 70 > prob
+            return 80 > prob
         elif slice == [0, 1, 0]:
-            return 30 > prob
+            return 50 > prob
         elif slice == [0, 0, 1] or slice == [1, 0, 0] or slice == [0, 0, 0]:
             return 0 > prob
 
@@ -86,21 +104,31 @@ class Jenga:
     # simulate one turn of jenga with player or bot
     # TODO add the bot simulating piece removal
     def play_round(self):
+        myturn = True
         while True:
             self.print_tower()
-            valid = False
-            while not valid:
-                value = input("pick a piece: ")
-                value = self.pick_piece(value)
+
+            if myturn:
+                valid = self.pick_piece()
+            else:
+                valid = self.auto_piece()
+
             self.remove_piece(valid[0], valid[1])
+            myturn = not myturn
+
             if self.get_success(valid[0]):
                 self.add_piece()
             else:
+                print("tower collapse! ! !")
+                self.print_tower()
                 break
-        print("good bye!")
+        if not myturn:
+            print("Better luck next time!")
+        else:
+            print("Nice, you win!")
 
 
 # playtest
 print(howto)
 g = Jenga()
-g.print_tower()
+g.play_round()
