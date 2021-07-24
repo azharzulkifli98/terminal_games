@@ -9,17 +9,31 @@ example board for chutes and ladders
 0 0 0 0 -9 0 0
 0 0 4 0 5 0 0
 0 0 0 0 0 0 start
+
++---+---+---+
+| 0 | 9 | 0 |
++---+---+---+
 """
 
 import random
+import copy
+
+howto = """
+This game seeks to follow the rules of chutes and ladders.
+players roll a die and move spaces accordingly, spaces with a number
+require players to adjust their position by that number of spaces.
+The main catch is that players can roll multiple times based on how
+many tokens they have. Each token gives one more roll for the turn 
+and each player starts with 7 tokens. At the start of their turn, each player
+can grab one token from the discard pile and add it to their own. First to reach space 100 wins.
+"""
 
 
 class Board:
     # the matrix variable should not change after init
     cols = 0
     rows = 0
-    matrix = [[]]
-    turn = 0
+    matrix = []
     positions = []
 
     def __init__(self, i, j, m, p):
@@ -32,41 +46,48 @@ class Board:
         self.rows = j
         self.cols = i
         self.matrix = m
-        self.turn = 0
         self.positions = p
 
 
     # positions will will determine whether to print
     # tile number or piece on tile
     def print_board(self):
-        for i in self.matrix:
+        # add in the player pieces
+        actual = copy.deepcopy(self.matrix)
+        for guy in self.positions:
+            actual[guy[1]][guy[2]] = guy[0]
+        # print out the board with borders
+        for i in actual:
+            top = "+"
+            middle = " "
             for j in i:
-                occupy = False
-                for k in self.positions:
-                    if i in k and j in k:
-                        print(k[0])
-                        occupy = True
-                # only print number when no player is there
-                if not occupy:
-                    print(i)
+                top += "---+"
+                middle += " " + str(j) + " |"
+            print(top)
+            print(middle)
 
 
     # move piece according to position stored in positions
-    def update_piece(self, i, j, player, value):
-        for p in self.positions:
-            if p == [player, i, j]:
-                # TODO: fix this and test vals
-                newi = (value % self.cols) - 0
-                p = [player, newi, newj]
+    def update_piece(self, player, value):
+        for p in range(len(self.positions)):
+            if self.positions[p] == player:
+                # can get new position using mod division
+                ijump = (value // self.cols)
+                jjump = (value % self.cols)
+                self.positions[p] = [player[0], player[1] - ijump, player[2] - jjump]
 
 
 
     # checks value of tile and moves piece on it accordingly
-    def update_bonus_tile(self, i, j):
-        val = self.matrix[i][j]
-        self.update_piece(i, j, val)
+    def update_bonus_tile(self, player):
+        if player[1] == 0 and player[2] == 0:
+            pass
+        else:
+            val = self.matrix[player[1]][player[2]]
+            self.update_piece(player, val)
 
 
+    # TODO fix this
     def get_distance_from_goal(self, player):
         for p in self.positions:
             if p[0] == player:
@@ -77,22 +98,42 @@ class Board:
 
 
 class Game:
+    # start by making this a game of only humans and then add ai later
+    turn = 0
+    board = 0
+    players = []
 
-    def __init__(self) -> None:
-        players = []
-        num_players = 0
+    def __init__(self, cal_board) -> None:
+        self.players = [['A', 0, 0], ['B', 0, 0], ['C', 0, 0], ['D', 0, 0]]
+        self.turn = 0
+        self.board = cal_board
+
 
     def roll_die(self):
-        pass
+        return random.randint(1, 6)
+
 
     def use_tokens(self):
         pass
 
-    def player_turn(self):
-        pass
+
+    def player_turn(self, turnplayer):
+        val = self.roll_die()
+        self.board.update_piece(turnplayer, val)
+        self.board.update_bonus_tile(turnplayer)
+
     
+
+    def full_turn(self):
+        for p in self.players:
+            self.player_turn(p)
+        self.turn += 1
+
+
     def print_game(self):
-        pass
+        print("Player A is in the lead!")
+        print("Tokens: 0   0   0   0")
+        self.board.print_board()
 
 
     def play(self):
@@ -104,6 +145,10 @@ class Game:
 
 
 # need extensive planning
-g = Board(3, 3, [['@', 0, 0], [0, 0, 0], [0, 0, 0]], [['S', 3, 3], ['T', 1, 3]] )
+g = Board(4, 3, [['@', 0, 0, 2], [0, 0, 0, 0], [0, 0, 0, "start"]], [['A', 2, 3], ['B', 1, 2]] )
 
+g.print_board()
+g.update_piece(['A', 2, 3], 5)
+g.update_bonus_tile(['A', 0, 3])
+print("\n \n")
 g.print_board()
