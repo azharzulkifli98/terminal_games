@@ -1,6 +1,7 @@
 # 2x2 with lists
 
 import random
+import numpy
 
 
 """ faces are 
@@ -51,7 +52,7 @@ cube = [ [[A], [B]],
 # 0 for faces, 1 for colors
 def print_cube():
     # B
-    print("   ", F[2], G[0], "         ", C[2], B[0])
+    print("   ", F[2], G[0], "         ", C[1], B[0])
     print("   ", B[0], C[2], "         ", G[0], F[2])
     print("")
     # R U L D
@@ -189,3 +190,58 @@ def play():
 
 # features to consider:
 # 3x3 mode, sudoku mode, solve, reset/set, undo
+
+"""
+Moving into a 3x3 cube requires more classes, one for each piece and
+one for the total cube
+Rotations will require a bit of matrix algebra using numpy and rotation matrices
+
+"""
+
+# CONSTANTS
+X_CLOCKWISE = [ [1, 0, 0], [0, 0, -1], [0, 1, 0] ]
+Y_CLOCKWISE = [ [0, 0, 1], [0, 1, 0], [-1, 0, 0] ]
+Z_CLOCKWISE = [ [0, -1, 0], [1, 0, 0], [0, 0, 1] ]
+
+X_REVERSE = [ [1, 0, 0], [0, 0, 1], [0, -1, 0] ]
+Y_REVERSE = [ [0, 0, -1], [0, 1, 0], [1, 0, 0] ]
+Z_REVERSE = [ [0, 1, 0], [-1, 0, 0], [0, 0, 1] ]
+
+
+class Cube_Piece:
+    # defined by x, y, and z vectors
+    vectors = [0, 0, 0]
+    colors = [0, 0, 0]
+
+    def __init__(self, direction, color_set):
+        self.vectors = direction
+        self.colors = color_set
+
+    def x_permute(self, ANGLE):
+        self.vectors = numpy.dot(ANGLE, self.vectors)
+        # swap y and z regardless of the direction of rotation
+        self.colors = [self.colors[0], self.colors[2], self.colors[1]]
+
+
+    def y_permute(self, ANGLE):
+        self.vectors = numpy.dot(ANGLE, self.vectors)
+        # swap x and z
+        self.colors = [self.colors[2], self.colors[1], self.colors[0]]
+
+
+    def z_permute(self, ANGLE):
+        self.vectors = numpy.dot(ANGLE, self.vectors)
+        # swap x and y
+        self.colors = [self.colors[1], self.colors[0], self.colors[2]]
+
+
+    def get_piece(self):
+        print(self.vectors[0], self.vectors[1], self.vectors[2])
+        print(self.colors[0], self.colors[1], self.colors[2])
+
+
+
+
+test = Cube_Piece([1, 1, 1], [green, blue, red])
+test.x_permute(X_CLOCKWISE)
+test.get_piece()
