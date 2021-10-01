@@ -84,33 +84,27 @@ class Cube:
     reset the cube when the player is done
     """
     main_bag = []
-    faces = []
-    edges = []
-    corners = []
 
 
     def __init__(self) -> None:
-        self.faces = [ 
+
+        self.main_bag = [ 
             Cube_Piece([-1, 0, 0], [GREEN, 0, 0]),
             Cube_Piece([1, 0, 0], [BLUE, 0, 0]),
             Cube_Piece([0, -1, 0], [0, MAGENTA, 0]),
             Cube_Piece([0, 1, 0], [0, RED, 0]),
             Cube_Piece([0, 0, -1], [0, 0, YELLOW]),
-            Cube_Piece([0, 0, 1], [0, 0, WHITE])
-        ]
+            Cube_Piece([0, 0, 1], [0, 0, WHITE]),
 
-        self.corners = [ 
             Cube_Piece([-1, -1, -1], [GREEN, MAGENTA, YELLOW]),
-            Cube_Piece([1, -1, -1], [BLUE, MAGENTA, YELLOW]),
+            Cube_Piece([-1, 1, 1], [GREEN, RED, WHITE]),
             Cube_Piece([-1, 1, -1], [GREEN, RED, YELLOW]),
             Cube_Piece([-1, -1, 1], [GREEN, MAGENTA, WHITE]),
             Cube_Piece([1, 1, -1], [BLUE, RED, YELLOW]),
             Cube_Piece([1, -1, 1], [BLUE, MAGENTA, WHITE]),
             Cube_Piece([1, -1, -1], [BLUE, MAGENTA, YELLOW]),
-            Cube_Piece([1, 1, 1], [BLUE, RED, WHITE])
-        ]
+            Cube_Piece([1, 1, 1], [BLUE, RED, WHITE]),
 
-        self.edges = [ 
             Cube_Piece([0, -1, -1], [0, MAGENTA, YELLOW]),
             Cube_Piece([0, 1, -1], [0, RED, YELLOW]),
             Cube_Piece([0, -1, 1], [0, MAGENTA, WHITE]),
@@ -124,18 +118,31 @@ class Cube:
             Cube_Piece([1, 1, 0], [BLUE, RED, 0]),
             Cube_Piece([-1, -1, 0], [GREEN, MAGENTA, 0])
         ]
-
-        self.main_bag.append(self.faces)
-        self.main_bag.append(self.edges)
-        self.main_bag.append(self.corners)
     
 
-    def rotate(self, angle, axis):
-        return 0
+    def rotate(self, angle, axis, slice):
+
+        for piece in self.main_bag:
+            if piece.vectors[axis] == slice:
+                piece.x_permute(angle)
+
     
 
     def print_cube(self):
-        print(self.faces)
+        greenside = [piece for piece in self.main_bag if piece.vectors[0] == -1]
+        blueside = [piece for piece in self.main_bag if piece.vectors[0] ==1]
+
+        greenside.sort(key=lambda x : (x.vectors[2], x.vectors[1]))
+        blueside.sort(key=lambda x : (x.vectors[2], x.vectors[1]))
+
+        print("    ", greenside[0].colors[2], greenside[1].colors[2], greenside[2].colors[2])
+        print("  ", greenside[0].colors[1], greenside[0].colors[0], greenside[1].colors[0], greenside[2].colors[0], greenside[2].colors[1])
+        print("  ", greenside[3].colors[1], greenside[3].colors[0], greenside[4].colors[0], greenside[5].colors[0], greenside[5].colors[1])
+        print("  ", greenside[6].colors[1], greenside[6].colors[0], greenside[7].colors[0], greenside[8].colors[0], greenside[8].colors[1])
+        print("    ", greenside[6].colors[2], greenside[7].colors[2], greenside[8].colors[2])
+
+        for color in blueside:
+            print(color.colors[0])
     
 
     def read_user_input(self, string):
@@ -155,8 +162,7 @@ class Cube:
 
 
 
-test = Cube_Piece([1, 1, 1], [GREEN, BLUE, RED])
-test.x_permute(X_CLOCKWISE)
-test.get_piece()
 game = Cube()
+game.print_cube()
+game.rotate(0, 0, 0)
 game.print_cube()
