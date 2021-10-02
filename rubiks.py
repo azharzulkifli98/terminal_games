@@ -1,4 +1,3 @@
-
 """
 Moving into a 3x3 cube requires more classes, one for each piece and
 one for the total cube
@@ -66,6 +65,21 @@ class Cube_Piece:
         self.vectors = numpy.dot(ANGLE, self.vectors)
         # swap x and y
         self.colors = [self.colors[1], self.colors[0], self.colors[2]]
+    
+
+
+
+    # for actual use with cube functions for given arguments
+    def permute(self, angle):
+        self.vectors = numpy.dot(angle, self.vectors)
+
+    def color_swap(self, axis):
+        if axis == 0:
+            self.colors = [self.colors[0], self.colors[2], self.colors[1]]
+        elif axis == 1:
+            self.colors = [self.colors[2], self.colors[1], self.colors[0]]
+        elif axis == 2:
+            self.colors = [self.colors[1], self.colors[0], self.colors[2]]
 
 
     def get_piece(self):
@@ -120,13 +134,21 @@ class Cube:
         ]
     
 
-    def rotate(self, angle, axis, slice):
 
+
+    def rotate(self, angle, axis, slice):
+        # here slice helps to index the x or y or z axis that will rotate
+        # so X_REVERSE, 0, -1 will rotate the green face counter clockwise ^_^
         for piece in self.main_bag:
             if piece.vectors[axis] == slice:
-                piece.x_permute(angle)
+                piece.permute(angle)
+                piece.color_swap(axis)
 
     
+    def scramble(self):
+        for n in range(10):
+            self.read_user_input('l')
+
 
     def print_cube(self):
         greenside = [piece for piece in self.main_bag if piece.vectors[0] == -1]
@@ -141,15 +163,47 @@ class Cube:
         print("  ", greenside[6].colors[1], greenside[6].colors[0], greenside[7].colors[0], greenside[8].colors[0], greenside[8].colors[1])
         print("    ", greenside[6].colors[2], greenside[7].colors[2], greenside[8].colors[2])
 
-        for color in blueside:
-            print(color.colors[0])
+        print("    ", blueside[0].colors[2], blueside[1].colors[2], blueside[2].colors[2])
+        print("  ", blueside[0].colors[1], blueside[0].colors[0], blueside[1].colors[0], blueside[2].colors[0], blueside[2].colors[1])
+        print("  ", blueside[3].colors[1], blueside[3].colors[0], blueside[4].colors[0], blueside[5].colors[0], blueside[5].colors[1])
+        print("  ", blueside[6].colors[1], blueside[6].colors[0], blueside[7].colors[0], blueside[8].colors[0], blueside[8].colors[1])
+        print("    ", blueside[6].colors[2], blueside[7].colors[2], blueside[8].colors[2])
     
 
     def read_user_input(self, string):
         if len(string) > 1:
             return "Sorry that wont do..."
         else:
-            return "Hi"
+            # should be 12 types of rotations in total
+            if string == "l":
+                self.rotate(X_REVERSE, 0, -1)
+            elif string == "L":
+                self.rotate(X_CLOCKWISE, 0, -1)
+            elif string == "r":
+                self.rotate(X_REVERSE, 0, 1)
+            elif string == "R":
+                self.rotate(X_CLOCKWISE, 0, 1)
+
+            # Z AXIS STUFF
+            elif string == "u":
+                self.rotate(Z_REVERSE, 2, -1)
+            elif string == "U":
+                self.rotate(Z_CLOCKWISE, 2, 1)
+            elif string == "d":
+                self.rotate(Z_REVERSE, 2, -1)
+            elif string == "D":
+                self.rotate(Z_CLOCKWISE, 2, 1)
+
+            # Y AXIS STUFF
+            elif string == "f":
+                self.rotate(Y_REVERSE, 1, 1)
+            elif string == "F":
+                self.rotate(Y_CLOCKWISE, 1, 1)
+            elif string == "b":
+                self.rotate(Y_REVERSE, 1, -1)
+            elif string == "B":
+                self.rotate(Y_CLOCKWISE, 1, -1)
+
 
 
     def play(self):
@@ -164,5 +218,5 @@ class Cube:
 
 game = Cube()
 game.print_cube()
-game.rotate(0, 0, 0)
+game.rotate(Z_REVERSE, 2, 1)
 game.print_cube()
