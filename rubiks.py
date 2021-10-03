@@ -7,6 +7,7 @@ features to consider:
 """
 import random
 import numpy
+import os
 
 #                                           CONSTANTS
 
@@ -48,25 +49,6 @@ class Cube_Piece:
     def __init__(self, direction, color_set):
         self.vectors = direction
         self.colors = color_set
-
-    def x_permute(self, ANGLE):
-        self.vectors = numpy.dot(ANGLE, self.vectors)
-        # swap y and z regardless of the direction of rotation
-        self.colors = [self.colors[0], self.colors[2], self.colors[1]]
-
-
-    def y_permute(self, ANGLE):
-        self.vectors = numpy.dot(ANGLE, self.vectors)
-        # swap x and z
-        self.colors = [self.colors[2], self.colors[1], self.colors[0]]
-
-
-    def z_permute(self, ANGLE):
-        self.vectors = numpy.dot(ANGLE, self.vectors)
-        # swap x and y
-        self.colors = [self.colors[1], self.colors[0], self.colors[2]]
-    
-
 
 
     # for actual use with cube functions for given arguments
@@ -132,7 +114,40 @@ class Cube:
             Cube_Piece([1, 1, 0], [BLUE, RED, 0]),
             Cube_Piece([-1, -1, 0], [GREEN, MAGENTA, 0])
         ]
-    
+
+
+    def print_cube(self):
+        gs = [piece for piece in self.main_bag if piece.vectors[0] == -1]
+        bs = [piece for piece in self.main_bag if piece.vectors[0] == 1]
+        m = [piece for piece in self.main_bag if piece.vectors[0] == 0]
+
+        gs.sort(key=lambda x : (x.vectors[2], x.vectors[1]))
+        bs.sort(key=lambda x : (x.vectors[2], x.vectors[1]))
+        m.sort(key=lambda x: (x.vectors[2], x.vectors[1]))
+
+        layer1 = "    " + gs[0].colors[2] + " " + gs[1].colors[2] + " " + gs[2].colors[2]
+        layer1 = layer1, "\t    " + bs[0].colors[2] + " " + bs[1].colors[2] + " " + bs[2].colors[2]
+
+        layer2 = "  " + gs[0].colors[1]  + " " + gs[0].colors[0]  + " " + gs[1].colors[0]  + " " + gs[2].colors[0] + " " + gs[2].colors[1]
+        layer2 = "\t  " + bs[0].colors[1] + " " + bs[0].colors[0] + " " + bs[1].colors[0] + " " + bs[2].colors[0], bs[2].colors[1]
+
+        layer3 = "  " + gs[3].colors[1] + " " + gs[3].colors[0] + " " + gs[4].colors[0] + " " + gs[5].colors[0] + " " + gs[5].colors[1]
+        layer3 = layer3 + "  " + " " + bs[3].colors[1] + " " + bs[3].colors[0], bs[4].colors[0] + " " + bs[5].colors[0] + " " + bs[5].colors[1]
+
+        layer4 = "  " + "  " + gs[6].colors[1] + "  " + gs[6].colors[0] + "  " + gs[7].colors[0] + "  " + gs[8].colors[0] + "  " + gs[8].colors[1]
+        layer4 = layer4 + "  ", bs[6].colors[1] + "  " + bs[6].colors[0] + "  " + bs[7].colors[0] + "  " + bs[8].colors[0] + "  " + bs[8].colors[1]
+
+        layer5 = "    " + "  " + gs[6].colors[2] + "  " + gs[7].colors[2] + "  " + gs[8].colors[2]
+        layer5 = layer5 + "    " + "  " + bs[6].colors[2] + "  " + bs[7].colors[2] + "  " + bs[8].colors[2]
+
+        print("\n")
+        print(layer1)
+        print(layer2)
+        print(layer3)
+        print(layer4)
+        print(layer5)
+        print("\n")
+
 
 
 
@@ -143,34 +158,9 @@ class Cube:
             if piece.vectors[axis] == slice:
                 piece.permute(angle)
                 piece.color_swap(axis)
-
-    
-    def scramble(self):
-        for n in range(10):
-            self.read_user_input('l')
-
-
-    def print_cube(self):
-        greenside = [piece for piece in self.main_bag if piece.vectors[0] == -1]
-        blueside = [piece for piece in self.main_bag if piece.vectors[0] ==1]
-
-        greenside.sort(key=lambda x : (x.vectors[2], x.vectors[1]))
-        blueside.sort(key=lambda x : (x.vectors[2], x.vectors[1]))
-
-        print("    ", greenside[0].colors[2], greenside[1].colors[2], greenside[2].colors[2])
-        print("  ", greenside[0].colors[1], greenside[0].colors[0], greenside[1].colors[0], greenside[2].colors[0], greenside[2].colors[1])
-        print("  ", greenside[3].colors[1], greenside[3].colors[0], greenside[4].colors[0], greenside[5].colors[0], greenside[5].colors[1])
-        print("  ", greenside[6].colors[1], greenside[6].colors[0], greenside[7].colors[0], greenside[8].colors[0], greenside[8].colors[1])
-        print("    ", greenside[6].colors[2], greenside[7].colors[2], greenside[8].colors[2])
-
-        print("    ", blueside[0].colors[2], blueside[1].colors[2], blueside[2].colors[2])
-        print("  ", blueside[0].colors[1], blueside[0].colors[0], blueside[1].colors[0], blueside[2].colors[0], blueside[2].colors[1])
-        print("  ", blueside[3].colors[1], blueside[3].colors[0], blueside[4].colors[0], blueside[5].colors[0], blueside[5].colors[1])
-        print("  ", blueside[6].colors[1], blueside[6].colors[0], blueside[7].colors[0], blueside[8].colors[0], blueside[8].colors[1])
-        print("    ", blueside[6].colors[2], blueside[7].colors[2], blueside[8].colors[2])
     
 
-    def read_user_input(self, string):
+    def execute_user_input(self, string):
         if len(string) > 1:
             return "Sorry that wont do..."
         else:
@@ -205,18 +195,40 @@ class Cube:
                 self.rotate(Y_CLOCKWISE, 1, -1)
 
 
+    def scramble(self):
+        for n in range(10):
+            flip = random.choice(['l', 'L', 'r', 'R', 'u', 'U', 'd', 'D', 'f', 'F', 'b', 'B'])
+            self.execute_user_input(flip)
+
 
     def play(self):
-        # clear screen
-        # print cube
-        # get input
-        # perform rotation or help or reset or undo
+        help = "here is the full documentation for how to play...s"
+        message = help
+        while True:
+            # clear screen
+            os.system('clear')
+
+            # print cube
+            #self.print_cube()
+
+            # get input
+            next = input(message + " > ")
+            if next == "help":
+                message = help
+            elif next == "quit":
+                break
+            else:
+                for char in next:
+                    if char not in "lrudfbLRUDFB":
+                        message = "bad input, try again"
+                        continue
+                message = ""
+                for char in next:
+                    self.execute_user_input(char)
+
         # repeat
-        return 0
 
 
 
 game = Cube()
-game.print_cube()
-game.rotate(Z_REVERSE, 2, 1)
-game.print_cube()
+game.play()
