@@ -80,6 +80,7 @@ class Cube:
     reset the cube when the player is done
     """
     main_bag = []
+    last_move = ""
 
 
     def __init__(self) -> None:
@@ -126,19 +127,20 @@ class Cube:
         m.sort(key=lambda x: (x.vectors[2], x.vectors[1]))
 
         layer1 = "    " + gs[0].colors[2] + " " + gs[1].colors[2] + " " + gs[2].colors[2]
-        layer1 = layer1, "\t    " + bs[0].colors[2] + " " + bs[1].colors[2] + " " + bs[2].colors[2]
+        layer1 = layer1 + "\t    " + bs[0].colors[2] + " " + bs[1].colors[2] + " " + bs[2].colors[2]
 
         layer2 = "  " + gs[0].colors[1]  + " " + gs[0].colors[0]  + " " + gs[1].colors[0]  + " " + gs[2].colors[0] + " " + gs[2].colors[1]
-        layer2 = "\t  " + bs[0].colors[1] + " " + bs[0].colors[0] + " " + bs[1].colors[0] + " " + bs[2].colors[0], bs[2].colors[1]
+        layer2 = layer2 + "\t  " + bs[0].colors[1] + " " + bs[0].colors[0] + " " + bs[1].colors[0] + " " + bs[2].colors[0] + " " + bs[2].colors[1]
 
         layer3 = "  " + gs[3].colors[1] + " " + gs[3].colors[0] + " " + gs[4].colors[0] + " " + gs[5].colors[0] + " " + gs[5].colors[1]
-        layer3 = layer3 + "  " + " " + bs[3].colors[1] + " " + bs[3].colors[0], bs[4].colors[0] + " " + bs[5].colors[0] + " " + bs[5].colors[1]
+        layer3 = layer3 + "\t  " + bs[3].colors[1] + " " + bs[3].colors[0] + " " + bs[4].colors[0] + " " + bs[5].colors[0] + " " + bs[5].colors[1]
 
-        layer4 = "  " + "  " + gs[6].colors[1] + "  " + gs[6].colors[0] + "  " + gs[7].colors[0] + "  " + gs[8].colors[0] + "  " + gs[8].colors[1]
-        layer4 = layer4 + "  ", bs[6].colors[1] + "  " + bs[6].colors[0] + "  " + bs[7].colors[0] + "  " + bs[8].colors[0] + "  " + bs[8].colors[1]
+        layer4 = "  " + gs[6].colors[1] + " " + gs[6].colors[0] + " " + gs[7].colors[0] + " " + gs[8].colors[0] + " " + gs[8].colors[1]
+        layer4 = layer4 + "\t  " + bs[6].colors[1] + " " + bs[6].colors[0] + " " + bs[7].colors[0] + " " + bs[8].colors[0] + " " + bs[8].colors[1]
 
-        layer5 = "    " + "  " + gs[6].colors[2] + "  " + gs[7].colors[2] + "  " + gs[8].colors[2]
-        layer5 = layer5 + "    " + "  " + bs[6].colors[2] + "  " + bs[7].colors[2] + "  " + bs[8].colors[2]
+        layer5 = "    " + gs[6].colors[2] + " " + gs[7].colors[2] + " " + gs[8].colors[2]
+        layer5 = layer5 + "\t    " + bs[6].colors[2] + " " + bs[7].colors[2] + " " + bs[8].colors[2]
+
 
         print("\n")
         print(layer1)
@@ -195,28 +197,68 @@ class Cube:
                 self.rotate(Y_CLOCKWISE, 1, -1)
 
 
+    def undo_move(self):
+        # undo moves by reversing string and calling reverse rotations
+        backwards = self.last_move[::-1]
+        backwards = backwards.swapcase()
+        print(backwards)
+        for char in backwards:
+            self.execute_user_input(char)
+        self.last_move = ""
+
+
     def scramble(self):
+        # perform 10 random rotations to get a scrambled cube to solve
+        total = ""
         for n in range(10):
             flip = random.choice(['l', 'L', 'r', 'R', 'u', 'U', 'd', 'D', 'f', 'F', 'b', 'B'])
+            total = total + flip
             self.execute_user_input(flip)
+        self.last_move = total
 
 
     def play(self):
-        help = "here is the full documentation for how to play...s"
+        # main function of Cube class that lets users play with a rubiks cube using char input
+        help = """
+        This program lets you play with a 3x3 rubiks cube model
+        the front and back face are printed out to keep track of piece locations
+        you can rotate the cube sides using the following notation:
+        r - right face clockwise  R - right face counterclockwise
+        l - left face clockwise   L - left face counterclockwise
+        u - top face clockwise    U - top face counterclockwise
+        d - bottom face clockwise D - bottom face counterclockwise
+        f - front face clockwise  F - front face counterclockwise
+        b - rear face clockwise   B - rear face counterclockwise
+        You can perform multiple rotations at once by giving a string as input
+        for example rrll will rotate both faces twice which is equivalent to 
+        rotating the center slice counterclockwise twice
+        The program also comes with the following keywords:
+        help - print this message again
+        quit - end the program
+        scramble - perform random rotations on the cube
+        undo - undo the rotations performed in the previous move
+        """
         message = help
         while True:
             # clear screen
             os.system('clear')
 
             # print cube
-            #self.print_cube()
+            self.print_cube()
 
             # get input
-            next = input(message + " > ")
+            next = input(message + "\n > ")
+
             if next == "help":
                 message = help
             elif next == "quit":
                 break
+            elif next == "scramble":
+                self.scramble()
+            elif next == "undo":
+                self.undo_move()
+
+            # perform rotations on cube
             else:
                 for char in next:
                     if char not in "lrudfbLRUDFB":
@@ -225,6 +267,10 @@ class Cube:
                 message = ""
                 for char in next:
                     self.execute_user_input(char)
+                    self.print_cube()
+                
+                # save this action for undo function
+                self.last_move = next
 
         # repeat
 
