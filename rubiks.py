@@ -126,20 +126,29 @@ class Cube:
         bs.sort(key=lambda x : (x.vectors[2], x.vectors[1]))
         m.sort(key=lambda x: (x.vectors[2], x.vectors[1]))
 
-        layer1 = "    " + gs[0].colors[2] + " " + gs[1].colors[2] + " " + gs[2].colors[2]
-        layer1 = layer1 + "\t    " + bs[0].colors[2] + " " + bs[1].colors[2] + " " + bs[2].colors[2]
+        def formats(a, b, c, d, e):
+            return "  " + a + " " + b + " " + c + " " + d + " " + e + "\t"
 
-        layer2 = "  " + gs[0].colors[1]  + " " + gs[0].colors[0]  + " " + gs[1].colors[0]  + " " + gs[2].colors[0] + " " + gs[2].colors[1]
-        layer2 = layer2 + "\t  " + bs[0].colors[1] + " " + bs[0].colors[0] + " " + bs[1].colors[0] + " " + bs[2].colors[0] + " " + bs[2].colors[1]
 
-        layer3 = "  " + gs[3].colors[1] + " " + gs[3].colors[0] + " " + gs[4].colors[0] + " " + gs[5].colors[0] + " " + gs[5].colors[1]
-        layer3 = layer3 + "\t  " + bs[3].colors[1] + " " + bs[3].colors[0] + " " + bs[4].colors[0] + " " + bs[5].colors[0] + " " + bs[5].colors[1]
+        layer1 = formats(" ", gs[0].colors[2], gs[1].colors[2], gs[2].colors[2], " ")
+        layer1 = layer1 + formats(" ", m[0].colors[2], m[1].colors[2], m[2].colors[2], " ")
+        layer1 = layer1 + formats(" ", bs[0].colors[2], bs[1].colors[2], bs[2].colors[2], " ")
 
-        layer4 = "  " + gs[6].colors[1] + " " + gs[6].colors[0] + " " + gs[7].colors[0] + " " + gs[8].colors[0] + " " + gs[8].colors[1]
-        layer4 = layer4 + "\t  " + bs[6].colors[1] + " " + bs[6].colors[0] + " " + bs[7].colors[0] + " " + bs[8].colors[0] + " " + bs[8].colors[1]
+        layer2 = formats(gs[0].colors[1], gs[0].colors[0], gs[1].colors[0], gs[2].colors[0], gs[2].colors[1])
+        layer2 = layer2 + formats(m[0].colors[1], " ", " ", " ", m[2].colors[1])
+        layer2 = layer2 + formats( bs[0].colors[1], bs[0].colors[0], bs[1].colors[0], bs[2].colors[0], bs[2].colors[1])
 
-        layer5 = "    " + gs[6].colors[2] + " " + gs[7].colors[2] + " " + gs[8].colors[2]
-        layer5 = layer5 + "\t    " + bs[6].colors[2] + " " + bs[7].colors[2] + " " + bs[8].colors[2]
+        layer3 = formats(gs[3].colors[1], gs[3].colors[0], gs[4].colors[0],  gs[5].colors[0], gs[5].colors[1])
+        layer3 = layer3 + formats(m[3].colors[1], " ", " ", " ", m[4].colors[1])
+        layer3 = layer3 + formats(bs[3].colors[1], bs[3].colors[0], bs[4].colors[0], bs[5].colors[0], bs[5].colors[1])
+
+        layer4 = formats(gs[6].colors[1], gs[6].colors[0], gs[7].colors[0], gs[8].colors[0], gs[8].colors[1])
+        layer4 = layer4 + formats(m[5].colors[1], " ", " ", " ", m[7].colors[1])
+        layer4 = layer4 + formats(bs[6].colors[1], bs[6].colors[0], bs[7].colors[0], bs[8].colors[0], bs[8].colors[1])
+
+        layer5 = formats(" ", gs[6].colors[2], gs[7].colors[2], gs[8].colors[2], " ")
+        layer5 = layer5 + formats(" ", m[5].colors[2], m[6].colors[2], m[7].colors[2], " ")
+        layer5 = layer5 + formats(" ", bs[6].colors[2], bs[7].colors[2], bs[8].colors[2], " ")
 
 
         print("\n")
@@ -167,33 +176,33 @@ class Cube:
             return "Sorry that wont do..."
         else:
             # should be 12 types of rotations in total
-            if string == "l":
+            if string == "b":
                 self.rotate(X_REVERSE, 0, -1)
-            elif string == "L":
+            elif string == "B":
                 self.rotate(X_CLOCKWISE, 0, -1)
-            elif string == "r":
+            elif string == "f":
                 self.rotate(X_REVERSE, 0, 1)
-            elif string == "R":
+            elif string == "F":
                 self.rotate(X_CLOCKWISE, 0, 1)
 
             # Z AXIS STUFF
             elif string == "u":
                 self.rotate(Z_REVERSE, 2, -1)
             elif string == "U":
-                self.rotate(Z_CLOCKWISE, 2, 1)
+                self.rotate(Z_CLOCKWISE, 2, -1)
             elif string == "d":
-                self.rotate(Z_REVERSE, 2, -1)
+                self.rotate(Z_REVERSE, 2, 1)
             elif string == "D":
                 self.rotate(Z_CLOCKWISE, 2, 1)
 
             # Y AXIS STUFF
-            elif string == "f":
+            elif string == "r":
                 self.rotate(Y_REVERSE, 1, 1)
-            elif string == "F":
+            elif string == "R":
                 self.rotate(Y_CLOCKWISE, 1, 1)
-            elif string == "b":
+            elif string == "l":
                 self.rotate(Y_REVERSE, 1, -1)
-            elif string == "B":
+            elif string == "L":
                 self.rotate(Y_CLOCKWISE, 1, -1)
 
 
@@ -233,10 +242,10 @@ class Cube:
         for example rrll will rotate both faces twice which is equivalent to 
         rotating the center slice counterclockwise twice
         The program also comes with the following keywords:
-        help - print this message again
-        quit - end the program
+        help     - print this message again
+        quit     - end the program
         scramble - perform random rotations on the cube
-        undo - undo the rotations performed in the previous move
+        undo     - undo all rotations performed in the previous move
         """
         message = help
         while True:
