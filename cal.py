@@ -15,12 +15,16 @@ example board for chutes and ladders
 +---+---+---+
 """
 
+import os
+from time import sleep
 import random
 import copy
+import configparser
+
 
 howto = """
 This game seeks to follow the rules of chutes and ladders.
-players roll a die and move spaces accordingly, spaces with a number
+Players roll a die and move spaces accordingly, spaces with a number
 require players to adjust their position by that number of spaces.
 The main catch is that players can roll multiple times based on how
 many tokens they have. Each token gives one more roll for the turn 
@@ -103,8 +107,14 @@ class Game:
     board = 0
     players = []
 
-    def __init__(self, cal_board) -> None:
-        self.players = [['A', 0, 0], ['B', 0, 0], ['C', 0, 0], ['D', 0, 0]]
+    def __init__(self, names, role, cal_board):
+        # format will be symbol: [name, index]
+        self.players = {
+            'A': [0, names[0], role[0]],
+            'B': [1, names[1], role[1]],
+            'C': [2, names[2], role[2]],
+            'D': [3, names[3], role[3]]
+        }
         self.turn = 0
         self.board = cal_board
 
@@ -113,7 +123,9 @@ class Game:
         return random.randint(1, 6)
 
 
-    def use_tokens(self):
+    def use_tokens(self, amount):
+        for t in range(amount):
+            self.roll_die()
         pass
 
 
@@ -131,24 +143,43 @@ class Game:
 
 
     def print_game(self):
-        print("Player A is in the lead!")
+        print(f"Player: {self.players['A'][1]} {self.players['B'][1]} {self.players['C'][1]} {self.players['D'][1]}")
         print("Tokens: 0   0   0   0")
         self.board.print_board()
 
 
     def play(self):
-        pass
+        # first setup
+        # num_players -> pick_roles -> pick_board/difficulty
+
+
+        # then loop
+        # cls -> print_score -> print_board -> get_coin_input -> roll_turn -> switch_to_next_player
+        for i in range(3):
+            os.system('clear')
+            self.print_game()
+            wait = input("> ")
+            for player in self.board.positions:
+                self.player_turn(player)
+
 
 
 #class AI_player
 
 
 
-# need extensive planning
-g = Board(4, 3, [['@', 0, 0, 2], [0, 0, 0, 0], [0, 0, 0, "start"]], [['A', 2, 3], ['B', 1, 2]] )
 
-g.print_board()
-g.update_piece(['A', 2, 3], 5)
-g.update_bonus_tile(['A', 0, 3])
-print("\n \n")
-g.print_board()
+
+
+
+
+
+# need extensive planning
+g = Board(4, 3, [['@', 0, 0, -2], [0, 0, 0, 0], [0, 0, 0, "$"]], [['A', 2, 3], ['B', 2, 3]] )
+
+
+# initial setup
+
+
+p = Game(['Ao', 'Bafuku', 'Choku', 'Dodon'], ['a', 'b', 'c', 'd'], g)
+p.play()
