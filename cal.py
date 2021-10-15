@@ -19,10 +19,9 @@ import os
 from time import sleep
 import random
 import copy
-import configparser
 
 
-howto = """
+HOWTO = """
 This game seeks to follow the rules of chutes and ladders.
 Players roll a die and move spaces accordingly, spaces with a number
 require players to adjust their position by that number of spaces.
@@ -31,6 +30,22 @@ many tokens they have. Each token gives one more roll for the turn
 and each player starts with 7 tokens. At the start of their turn, each player
 can grab one token from the discard pile and add it to their own. First to reach space 100 wins.
 """
+
+SPARSEBOARD = [
+    ['@', 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, '$']
+]
+
+
+
 
 
 class Board:
@@ -63,10 +78,10 @@ class Board:
         # print out the board with borders
         for i in actual:
             top = "+"
-            middle = " "
+            middle = "|"
             for j in i:
                 top += "---+"
-                middle += " " + str(j) + " |"
+                middle += str(j).rjust(3) + "|"
             print(top)
             print(middle)
 
@@ -81,7 +96,6 @@ class Board:
                 self.positions[p] = [player[0], player[1] - ijump, player[2] - jjump]
 
 
-
     # checks value of tile and moves piece on it accordingly
     def update_bonus_tile(self, player):
         if player[1] == 0 and player[2] == 0:
@@ -91,95 +105,123 @@ class Board:
             self.update_piece(player, val)
 
 
-    # TODO fix this
-    def get_distance_from_goal(self, player):
-        for p in self.positions:
-            if p[0] == player:
-                # each row is worth num of cols
-                return (p[1] * self.rows) + p[2]
+
+
+class Player:
+    position = []
+    name = ""
+    role = ""
+    token_count = 0
+    # player doenst need to know turn order
+
+
+    # name has to shortened for formatting
+    def __init__(self, pos, na, ro):
+        self.position = pos
+        if len(na) > 10:
+            self.name = na[:9]
+        else:
+            self.name = na
+        self.role = ro
+        self.token_count = 7
+
+
+    # for keeping track with the board
+    def update_position(self, x, y):
+        self.position = [self.position[0], x, y]
+
+
+    #
+    def use_tokens(self, amount):
+        self.token_count = self.token_count - amount
+
+
+    # three methods for deciding how to spend players tokens on their turn
+    def decide_turn(self):
+        # human -> input
+        if self.role == "human":
+            val = ""
+            while not val.isdigit():
+                val = input("how many coins will you spend: ")
+
+        # greedy -> all tokens if > 1
+        if self.role == "greedy":
+            return self.token_count
+
+        # binge -> all if pos > 50% spend all else spend 1
+        if self.role == "binge":
+            if self.distance_from_goal() > 50:
+                return self.token_count
+            else:
+                return 0
 
 
 
 
 class Game:
-    # start by making this a game of only humans and then add ai later
     turn = 0
     board = 0
     players = []
 
-    def __init__(self, names, role, cal_board):
-        # format will be symbol: [name, index]
-        self.players = {
-            'A': [0, names[0], role[0]],
-            'B': [1, names[1], role[1]],
-            'C': [2, names[2], role[2]],
-            'D': [3, names[3], role[3]]
-        }
+    def __init__(self):
+        # for now we will go with 2 humans and 2 ai
+        self.players = []
+        self.players.append(Player(['A', 9, 9], input("enter player 1 name: "), "human"))
+        self.players.append(Player(['B', 9, 9], input("enter player 2 name: "), "human"))
+        self.players.append(Player(['C', 9, 9], "Bot1", "greedy"))
+        self.players.append(Player(['D', 9, 9], "Fred", "binge"))
         self.turn = 0
-        self.board = cal_board
+        initials = [['A', 9, 9], ['B', 9, 9], ['C', 9, 9], ['D', 9, 9]]
+        self.board = Board(10, 10, SPARSEBOARD, initials)
 
 
-    def roll_die(self):
-        return random.randint(1, 6)
 
 
-    def use_tokens(self, amount):
-        for t in range(amount):
-            self.roll_die()
-        pass
+    def player_turn(self, turn):
+        amount = self.players[turn].decide_turn()
+        self.players[turn].use_tokens(amount)
 
-
-    def player_turn(self, turnplayer):
-        val = self.roll_die()
-        self.board.update_piece(turnplayer, val)
-        self.board.update_bonus_tile(turnplayer)
-
-    
-
-    def full_turn(self):
-        for p in self.players:
-            self.player_turn(p)
-        self.turn += 1
+        # automatically performs die roll in for loop
+        for i in range(amount):
+            self.board.update_piece(self.players[turn].position, random.randint(1, 6))
+            self.board.update_bonus_tile(self.players[turn].position)
+        
+        # update player info
+        self.players[turn].position = self.board.positions[turn]
 
 
     def print_game(self):
-        print(f"Player: {self.players['A'][1]} {self.players['B'][1]} {self.players['C'][1]} {self.players['D'][1]}")
-        print("Tokens: 0   0   0   0")
+        row1 = ""
+        row2 = ""
+        for i in range(len(self.players)):
+            row1 += str(self.players[i].name).ljust(10)
+            row2 += str(self.players[i].token_count).ljust(10)
+        print(row1)
+        print(row2)
         self.board.print_board()
 
 
     def play(self):
-        # first setup
-        # num_players -> pick_roles -> pick_board/difficulty
-
-
-        # then loop
         # cls -> print_score -> print_board -> get_coin_input -> roll_turn -> switch_to_next_player
         for i in range(3):
             os.system('clear')
             self.print_game()
             wait = input("> ")
-            for player in self.board.positions:
-                self.player_turn(player)
-
-
-
-#class AI_player
-
-
-
-
-
+            for i in range(len(self.players)):
+                self.player_turn(i)
+            self.turn += 1
 
 
 
 
 # need extensive planning
-g = Board(4, 3, [['@', 0, 0, -2], [0, 0, 0, 0], [0, 0, 0, "$"]], [['A', 2, 3], ['B', 2, 3]] )
+#g = Board(4, 3, [['@', 0, 0, -2], [0, 0, 0, 0], [0, 0, 0, "$"]], [['A', 2, 3], ['B', 2, 3]] )
 
 
 # initial setup
 
 
-p = Game(['Ao', 'Bafuku', 'Choku', 'Dodon'], ['a', 'b', 'c', 'd'], g)
+#p = Game(['Ao', 'Bafuku', 'Choku', 'Dodon'], ['a', 'b', 'c', 'd'], g)
+#p.play()
+p = Game()
 p.play()
