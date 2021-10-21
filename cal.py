@@ -77,23 +77,29 @@ class Board:
             actual[guy[1]][guy[2]] = guy[0]
         # print out the board with borders
         for i in actual:
-            top = "+"
+            border = "+"
             middle = "|"
             for j in i:
-                top += "---+"
-                middle += str(j).rjust(3) + "|"
-            print(top)
+                border += "---+"
+                middle += str(j).center(3) + "|"
+            print(border)
             print(middle)
+        print(border)
 
 
     # move piece according to position stored in positions
     def update_piece(self, player, value):
+        print("player ", player[0], " has jumped ", value, " spaces far!")
         for p in range(len(self.positions)):
             if self.positions[p] == player:
                 # can get new position using mod division
                 ijump = (value // self.cols)
                 jjump = (value % self.cols)
+                newi = 0
+                newj = 0
                 self.positions[p] = [player[0], player[1] - ijump, player[2] - jjump]
+        print(self.positions)
+
 
 
     # checks value of tile and moves piece on it accordingly
@@ -140,9 +146,11 @@ class Player:
     def decide_turn(self):
         # human -> input
         if self.role == "human":
-            val = ""
+            val = "."
             while not val.isdigit():
                 val = input("how many coins will you spend: ")
+                if (val.isdigit() and int(val) <= self.token_count):
+                    return int(val)
 
         # greedy -> all tokens if > 1
         if self.role == "greedy":
@@ -150,7 +158,7 @@ class Player:
 
         # binge -> all if pos > 50% spend all else spend 1
         if self.role == "binge":
-            if self.distance_from_goal() > 50:
+            if self.position[2] > 5:
                 return self.token_count
             else:
                 return 0
@@ -182,12 +190,21 @@ class Game:
         self.players[turn].use_tokens(amount)
 
         # automatically performs die roll in for loop
-        for i in range(amount):
-            self.board.update_piece(self.players[turn].position, random.randint(1, 6))
-            self.board.update_bonus_tile(self.players[turn].position)
+        """
+        for i in range(amount + 1):
+            best = random.randint(1, 6)
+            print(best)
+            # update board info
+            self.board.update_piece(self.players[turn].position, best)
+            #self.board.update_bonus_tile(self.players[turn].position)
+        """
+        self.board.update_piece(self.players[turn].position, random.randint(1, 6))
         
         # update player info
         self.players[turn].position = self.board.positions[turn]
+        self.players[turn].token_count += 1
+
+
 
 
     def print_game(self):
@@ -203,13 +220,13 @@ class Game:
 
     def play(self):
         # cls -> print_score -> print_board -> get_coin_input -> roll_turn -> switch_to_next_player
-        for i in range(3):
+        for i in range(6):
             os.system('clear')
             self.print_game()
-            wait = input("> ")
             for i in range(len(self.players)):
                 self.player_turn(i)
             self.turn += 1
+            input("press enter to continue: ")
 
 
 
@@ -217,11 +234,13 @@ class Game:
 # need extensive planning
 #g = Board(4, 3, [['@', 0, 0, -2], [0, 0, 0, 0], [0, 0, 0, "$"]], [['A', 2, 3], ['B', 2, 3]] )
 
-
-# initial setup
-
-
-#p = Game(['Ao', 'Bafuku', 'Choku', 'Dodon'], ['a', 'b', 'c', 'd'], g)
-#p.play()
 p = Game()
-p.play()
+p.board.update_piece(['A', 9, 9], 4)
+print(p.board.positions)
+p.board.update_piece(['A', 9, 5], 4)
+p.board.update_piece(['A', 9, 1], 7)
+
+p.players[0].position = p.board.positions[0]
+p.players[0].token_count += 1
+p.board.print_board()
+#p.print_game()
