@@ -32,20 +32,21 @@ can grab one token from the discard pile and add it to their own. First to reach
 """
 
 SPARSEBOARD = [
-    ['@', 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, '$']
+    ['@', 0, 0, 0, 0, 0, 0, 10, 0, 0], 
+    [0, 0, 0, 0, 0, 0, 0, 10, 0, 0], 
+    [0, 0, 0, 0, 0, 0, 0, 10, 0, 0], 
+    [0, 0, 0, 0, 0, 0, 0, 10, 0, 0], 
+    [0, 0, 0, 0, 0, 0, 0, 10, 0, 0], 
+    [0, 0, 0, 0, 0, 0, 0, 10, 0, 0], 
+    [0, 0, 0, 0, 0, 0, 0, 10, 0, 0], 
+    [0, 0, 0, 0, 0, 0, 0, 10, 0, 0], 
+    [0, 0, 0, 0, 0, 0, 0, 10, 0, 0], 
+    [0, 0, 0, 0, 0, 0, 0, 10, 0, 0]
 ]
 
+DENSEBOARD = []
 
-
+NEGATIVEBOARD = []
 
 
 class Board:
@@ -58,9 +59,9 @@ class Board:
     def __init__(self, i, j, m, p):
         """
         example input looks like
-        g = Board([ [0, 0, 0, 0, 0], [1, 2, 1, -1, 0], 
-        [3, 0, 0, 2, 0], [0, 0, 0, 0, 1], [0, 0, 0, 0, 0] ], 
-        0, [ ['A', 5, 5], ['B', 5, 5], ['C', 5, 5] ])
+        g = Board([ [0,0,0,0,0], [1,2,1,-1,0], [3,0,0,2,0], [0,0,0,0,1], [0,0,0,0,0] ], 
+        0, 
+        [ ['A', 5, 5], ['B', 5, 5], ['C', 5, 5] ])
         """
         self.rows = j
         self.cols = i
@@ -71,10 +72,13 @@ class Board:
     # positions will will determine whether to print
     # tile number or piece on tile
     def print_board(self):
-        # add in the player pieces
+        # add in the player pieces without overriding any of them
         actual = copy.deepcopy(self.matrix)
         for guy in self.positions:
-            actual[guy[1]][guy[2]] = guy[0]
+            if str(actual[guy[1]] [guy[2]]).isdigit():
+                actual[guy[1]] [guy[2]] = guy[0]
+            else:
+                actual[guy[1]] [guy[2]] += str(guy[0])
         # print out the board with borders
         for i in actual:
             border = "+"
@@ -89,16 +93,20 @@ class Board:
 
     # move piece according to position stored in positions
     def update_piece(self, player, value):
-        print("player ", player[0], " has jumped ", value, " spaces far!")
         for p in range(len(self.positions)):
             if self.positions[p] == player:
                 # can get new position using mod division
-                ijump = (value // self.cols)
-                jjump = (value % self.cols)
-                newi = 0
-                newj = 0
-                self.positions[p] = [player[0], player[1] - ijump, player[2] - jjump]
-        print(self.positions)
+                newi = player[1] - (value // self.cols)
+                newj = player[2] - (value % self.cols)
+                if newj < 0:
+                    if newi < 1:
+                        newj = 0
+                    else:
+                        newj = self.cols + newj
+                        newi -= 1
+                if newi < 0:
+                    newi = 0
+                self.positions[p] = [player[0], newi, newj]
 
 
 
@@ -108,6 +116,10 @@ class Board:
             pass
         else:
             val = self.matrix[player[1]][player[2]]
+            if val < 0:
+                print("player has fallen x spaces!")
+            if val > 0:
+                print("player is launched forward x spaces!")
             self.update_piece(player, val)
 
 
@@ -148,17 +160,20 @@ class Player:
         if self.role == "human":
             val = "."
             while not val.isdigit():
-                val = input("how many coins will you spend: ")
-                if (val.isdigit() and int(val) <= self.token_count):
-                    return int(val)
+                val = input(f"how many coins will {self.name} spend: ")
+                if val.isdigit():
+                    if int(val) < self.token_count:
+                        return int(val)
+                    else:
+                        return self.token_count
 
         # greedy -> all tokens if > 1
         if self.role == "greedy":
             return self.token_count
 
-        # binge -> all if pos > 50% spend all else spend 1
+        # binge -> all if covered over 50% of board spend all else spend 1
         if self.role == "binge":
-            if self.position[2] > 5:
+            if self.position[1] < 5:
                 return self.token_count
             else:
                 return 0
@@ -174,6 +189,7 @@ class Game:
     def __init__(self):
         # for now we will go with 2 humans and 2 ai
         self.players = []
+        print(HOWTO)
         self.players.append(Player(['A', 9, 9], input("enter player 1 name: "), "human"))
         self.players.append(Player(['B', 9, 9], input("enter player 2 name: "), "human"))
         self.players.append(Player(['C', 9, 9], "Bot1", "greedy"))
@@ -183,6 +199,11 @@ class Game:
         self.board = Board(10, 10, SPARSEBOARD, initials)
 
 
+    def win_condition(self):
+        for guy in self.players:
+            if guy.position[1] == 0 and guy.position[2] == 0:
+                return True
+        return False
 
 
     def player_turn(self, turn):
@@ -190,26 +211,23 @@ class Game:
         self.players[turn].use_tokens(amount)
 
         # automatically performs die roll in for loop
-        """
         for i in range(amount + 1):
-            best = random.randint(1, 6)
-            print(best)
+            roll = random.randint(1, 6)
+            print(f"{self.players[turn].name} jumped {roll} spaces!")
             # update board info
-            self.board.update_piece(self.players[turn].position, best)
-            #self.board.update_bonus_tile(self.players[turn].position)
-        """
-        self.board.update_piece(self.players[turn].position, random.randint(1, 6))
+            self.board.update_piece(self.players[turn].position, roll)
+            self.board.update_bonus_tile(self.board.positions[turn])
+            # update player info
+            self.players[turn].position = self.board.positions[turn]
         
-        # update player info
-        self.players[turn].position = self.board.positions[turn]
         self.players[turn].token_count += 1
 
 
 
 
     def print_game(self):
-        row1 = ""
-        row2 = ""
+        row1 = "TURN".ljust(7)
+        row2 = str(self.turn).ljust(7)
         for i in range(len(self.players)):
             row1 += str(self.players[i].name).ljust(10)
             row2 += str(self.players[i].token_count).ljust(10)
@@ -220,27 +238,19 @@ class Game:
 
     def play(self):
         # cls -> print_score -> print_board -> get_coin_input -> roll_turn -> switch_to_next_player
-        for i in range(6):
+        while not self.win_condition():
             os.system('clear')
             self.print_game()
             for i in range(len(self.players)):
                 self.player_turn(i)
             self.turn += 1
             input("press enter to continue: ")
+        print("Congrats to <player2> you win the game!!!!!!")
+        self.board.print_board()
 
 
 
 
 # need extensive planning
-#g = Board(4, 3, [['@', 0, 0, -2], [0, 0, 0, 0], [0, 0, 0, "$"]], [['A', 2, 3], ['B', 2, 3]] )
-
 p = Game()
-p.board.update_piece(['A', 9, 9], 4)
-print(p.board.positions)
-p.board.update_piece(['A', 9, 5], 4)
-p.board.update_piece(['A', 9, 1], 7)
-
-p.players[0].position = p.board.positions[0]
-p.players[0].token_count += 1
-p.board.print_board()
-#p.print_game()
+p.play()
