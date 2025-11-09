@@ -1,10 +1,10 @@
+use std::io;
+use std::io::Write;
 use std::fmt;
+use std::env;
 use std::collections::HashMap;
 
 // constants
-// const var POCKET_POSITION: string = { 0:"A", 1:"B", 2:"C", 3:"D", "A":0, "B":1, "C":2, "D":3 }
-// my_array.iter().any(|&x| x == search_item)
-// let rank_a = front_card.chars().nth(1).expect("front card must have format SR");
 const SUITS: [char; 4] = ['D', 'S', 'H', 'C'];
 const RANKS: [char; 13] = ['A', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K'];
 const REDS: &str = "DH";
@@ -22,13 +22,32 @@ struct FreecellBoard
 {
     pockets: Vec<Card>,
     piles: [Vec<Card>; 8],
-    foundations: HashMap<char, char>
+    foundations: HashMap<char, char>,
+    moves_history: Vec<String>
 }
 
 struct SolitairePlayer
 {
     board: FreecellBoard,
-    moves_sequence: Vec<String>
+    heuristic: i32
+}
+
+fn get_alpha(index: usize) -> char
+{
+    let mapping = ['A', 'B', 'C', 'D'];
+    return mapping[index];
+}
+
+fn get_index(alpha: char) -> usize
+{
+    let mut index = match alpha {
+        'A' => 0,
+        'B' => 1,
+        'C' => 2,
+        'D' => 3,
+        _ => panic!("Cannot convert to an index")
+    };
+    return index;
 }
 
 fn is_opposite(front_card: &Card, back_card: &Card) -> bool
@@ -125,7 +144,8 @@ impl FreecellBoard
         {
             pockets: Vec::<Card>::new(),
             piles: all_piles,
-            foundations: starting_foundations
+            foundations: starting_foundations,
+            moves_history: Vec::<String>::new()
         }
     }
         
@@ -139,69 +159,10 @@ impl FreecellBoard
         }
     }
 
-    fn move_card_pile_to_pile(&mut self, start_row: usize, end_row: usize)
-    {
-        assert!(start_row < 8);
-        assert!(end_row < 8); 
-
-        let move_card = self.piles[start_row].pop().expect("No cards found in pile!");
-        self.piles[end_row].push(move_card);
-    }
-
-    fn move_card_pile_to_pocket(&mut self, start_row: usize)
-    {
-        assert!(start_row < 8);
-
-        let move_card = self.piles[start_row].pop().expect("No cards found in pile!");
-        self.pockets.push(move_card);
-    }
-
-    fn move_card_pocket_to_pile(&mut self, start_pos: usize, end_row: usize)
-    {
-        assert!(start_pos < self.pockets.len());
-        assert!(end_row < 8);
-
-        let move_card = self.pockets.remove(start_pos);
-        self.piles[end_row].push(move_card);
-    }
-    
-    fn push_pile_to_foundation(&mut self, start_row: usize)
-    {
-        assert!(start_row < 8);
-
-        let move_card = self.piles[start_row].pop().expect("No cards found in pile!");
-        self.foundations.insert(move_card.suit, move_card.rank);
-    }
-
-    fn push_pocket_to_foundation(&mut self, start_pos: usize)
-    {
-        assert!(start_pos < self.pockets.len());
-        
-        let move_card = self.pockets.remove(start_pos);
-        self.foundations.insert(move_card.suit, move_card.rank);
-    }
-}
-
-impl SolitairePlayer
-{
-    fn new() -> Self
-    {
-        // things missing from the game
-        // a way to read in the tableau from a text file
-        // a way to play the game as a human
-        // a way to solve an existing board and get back the list of moves needed
-        // which will require the valid moves list and heuristic and a star algorithm
-        return Self
-        {
-            board: FreecellBoard::new(),
-            moves_sequence: Vec::new()
-        }
-    }
-
     fn get_heuristic(&self) -> usize
     {
         let mut unordered_pairs = 0;
-        for row in self.board.piles.iter()
+        for row in self.piles.iter()
         {
             for i in 0..row.len() - 1
             {
@@ -215,7 +176,7 @@ impl SolitairePlayer
         let mut foundation_cards = 0;
         for suit in SUITS.iter()
         {
-            let foundation_rank = self.board.foundations[suit];
+            let foundation_rank = self.foundations[suit];
             let rank_index = RANKS.iter().position(|&r| r == foundation_rank);
 
             if rank_index.is_some()
@@ -233,100 +194,177 @@ impl SolitairePlayer
         return self.get_heuristic() == 0
     }
 
-    fn get_all_valid_moves(&self) -> Vec<String>
+    fn move_card_pile_to_pile(&mut self, start_row: usize, end_row: usize)
     {
-        let valid_moves = Vec::<String>::new();
+        assert!(start_row < 8);
+        assert!(end_row < 8); 
 
-        // pocket to foundation
-        for i in range(len(self.board.pockets)):
-            suit_spot = SUITS.index(self.board.pockets[i][0])
-            card_rank_index = RANKS.index(self.board.pockets[i][1])
-            current_rank = self.board.foundations[suit_spot][1]
-            if current_rank == RANKS[card_rank_index - 1]:
-                valid_moves.append(POCKET_POSITION[i] + "~E")
-        // pile to foundation
-        for i in range(len(self.board.piles)):
-            if not self.board.piles[i]: # no cards in pile to move
-                pass
-            suit_spot = SUITS.index(self.board.piles[i][-1][0])
-            card_rank_index = RANKS.index(self.board.piles[i][-1][1])
-            current_rank = self.board.foundations[suit_spot][1]
-            if current_rank == RANKS[card_rank_index - 1]:
-                valid_moves.append(str(i) + "~E")
-        # pile to pocket
-        open_pocket = len(self.board.pockets)
-        if open_pocket < 4:
-            for i in range(len(self.board.piles)):
-                if self.board.piles[i]: # card must exist in order to pocket it
-                    valid_moves.append(str(i) + "~" + POCKET_POSITION[open_pocket])
-        # pocket to pile
-        for i in range(len(self.board.piles)):
-            if not self.board.piles[i] and len(self.board.pockets) > 0:
-                # any card can go into an empty pile
-                for j in range(len(self.board.pockets)):
-                    valid_moves.append(POCKET_POSITION[j] + "~" + str(i))
-            else:
-                # must be opposite color and rank 1 down
-                for j in range(len(self.board.pockets)):
-                    if IS_VALID(self.board.piles[i][-1], self.board.pockets[j]):
-                        valid_moves.append(POCKET_POSITION[j] + "~" + str(i))
-        # pile to pile
-        for i in range(len(self.board.piles)):
-            if not self.board.piles[i]:
-                # any card can go into an empty pile
-                for j in range(len(self.board.piles)):
-                    valid_moves.append(str(j) + "~" + str(i))
-            else:
-                # must be opposite color and rank 1 down
-                for j in range(len(self.board.piles)):
-                    if i != j and IS_VALID(self.board.piles[i][-1], self.board.piles[j][-1]):
-                        valid_moves.append(str(j) + "~" + str(i))
-        
-        return valid_moves
-        return false
+        let move_card = self.piles[start_row].pop().expect("No cards found in pile!");
+        self.piles[end_row].push(move_card);
+
+        self.moves_history.push(start_row.to_string() + "~" + &end_row.to_string());
     }
 
-    fn a_star_search(board: FreecellBoard)
+    fn move_card_pile_to_pocket(&mut self, start_row: usize)
     {
-        let q = [gameobject]
-        while q:
-                # get gameobject with best moveset
-                gameobject = heapq.heappop(q)
+        assert!(start_row < 8);
 
-                if gameobject.condition == "win":
-                        print(gameobject.previous_moves)
-                        print(gameobject.score)
-                        gameobject.board.get_board()
-                        return True
-                else:
-                        for dir in ['U', 'R', 'D', 'L']:
-                                if gameobject.player.is_valid_move(gameobject.board.truemap, dir):
-                                        # simulate doing move before adding to the queue
-                                        nextmove = deepcopy(gameobject)
-                                        nextmove.game_loop(dir)
-                                        nextmove.update_condition()
-                                        nextmove.set_heuristic()
-                                        if nextmove.condition != "lose":
-                                                heapq.heappush(q, nextmove)
+        let move_card = self.piles[start_row].pop().expect("No cards found in pile!");
+        self.pockets.push(move_card);
+        
+        self.moves_history.push(start_row.to_string() + "~" + &get_alpha(self.pockets.len()).to_string());
+    }
+
+    fn move_card_pocket_to_pile(&mut self, start_pos: usize, end_row: usize)
+    {
+        assert!(start_pos < self.pockets.len());
+        assert!(end_row < 8);
+
+        let move_card = self.pockets.remove(start_pos);
+        self.piles[end_row].push(move_card);
+
+        self.moves_history.push(get_alpha(start_pos).to_string() + "~" + &end_row.to_string());
+    }
+    
+    fn push_pile_to_foundation(&mut self, start_row: usize)
+    {
+        assert!(start_row < 8);
+
+        let move_card = self.piles[start_row].pop().expect("No cards found in pile!");
+        self.foundations.insert(move_card.suit, move_card.rank);
+
+        self.moves_history.push(start_row.to_string() + "~E");
+    }
+
+    fn push_pocket_to_foundation(&mut self, start_pos: usize)
+    {
+        assert!(start_pos < self.pockets.len());
+        
+        let move_card = self.pockets.remove(start_pos);
+        self.foundations.insert(move_card.suit, move_card.rank);
+        
+        self.moves_history.push(get_alpha(start_pos).to_string() + "~E");
+    }
+
+    fn get_all_valid_moves(&self) -> Vec<String>
+    {
+        let mut valid_moves = Vec::<String>::new();
+
+        for i in 0..self.pockets.len() // pocket to foundation
+        {
+            let pocket_card = self.pockets[i];
+            let foundation_card = Card
+            {
+                suit: pocket_card.suit,
+                rank: self.foundations[&pocket_card.suit] // TODO: confirm this works ok for '-'
+            };
+            if is_ordered(&pocket_card, &foundation_card)
+            {
+                valid_moves.push(get_alpha(i).to_string() + "~E");
+            }
+        }
+
+        for i in 0..8 // pile to foundation
+        {
+            if self.piles[i].len() > 0 // card exists
+            {
+                let pile_card = self.piles[i].last().unwrap();
+                let foundation_card = Card
+                {
+                    suit: pile_card.suit,
+                    rank: self.foundations[&pile_card.suit]
+                };
+                if is_ordered(&pile_card, &foundation_card)
+                {
+                    valid_moves.push(i.to_string() + "~E");
+                }
+            }
+        }
+
+        if self.pockets.len() < 4 // pile to pocket
+        {
+            for i in 0..8 // iterate all columns
+            {
+                if self.piles[i].len() > 0 // card exists in this column
+                {
+                    valid_moves.push(i.to_string() + "~" + get_alpha(&self.pockets.len()).to_string());
+                }
+            }
+        }
+
+        for i in 0..8
+        {
+            if self.piles[i].len() == 0 // empty pile is free real estate
+            {
+                for j in 0..8
+                {
+                    if self.piles[j].len() > 0 // card exists in this column
+                    {
+                        valid_moves.push(j.to_string() + "~" &i.to_string());
+                    }
+                }
+                for j in 0..self.pockets.len()
+                {
+                    valid_moves.push(get_alpha(j).to_string() + "~" + &i.to_string());
+                }
+            }
+            else
+            {
+                for j in 0..self.pockets.len() // pocket to pile
+                {
+                    if is_ordered(&self.pockets[j], &self.piles[i].last())
+                    {
+                        valid_moves.push(get_alpha(j).to_string() + "~" + &i.to_string());
+                    }
+                }
+                for j in 0..8 // pile to pile, must be different columns that both have cards that are valid
+                {
+                    if i != j && self.piles[j].len() > 0 && is_ordered(&self.pile[j].last(), &self.pile[i].last())
+                    {
+                        valid_moves.push(j.to_string() + "~" &i.to_string());
+                    }
+                }
+            }
+        }
+
+        return valid_moves
     }
 }
 
 fn main()
 {
-    println!("hello.");
+    let args: Vec<String> = env::args().collect();
 
-    // set up board
-    // if arg given parse here
+    if args.len() > 1
+    {
+        let file_path = &args[1];
+        println!("{}", file_path.to_string());
 
-    // ask for input and parse it
+        // setup board ( txt file )
+    }
+    else
+    {
+        println!("hmmm");
 
-    // if valid move call Move()
+        // setup board
+    }
 
-    // if keyword solve call Solve()
+    loop
+    {
+        print!("> ");
+        io::stdout().flush().unwrap();
 
-    // if keywork quit break loop
+        let mut player_input = String::new();
 
-    let mut h = SolitairePlayer::new();
-    let winning = h.reached_win();
-    println!("{}", h.get_heuristic());
+        io::stdin().read_line(&mut player_input).expect("Failed to read line");
+            // if valid move call Move()
+
+            // if keyword solve call Solve()
+
+            // if keywork quit or game solved, break loop
+        break;
+    }
+
+    // my_array.iter().any(|&x| x == search_item)
+    // let rank_a = front_card.chars().nth(1).expect("front card must have format SR");
 }
