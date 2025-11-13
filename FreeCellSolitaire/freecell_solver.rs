@@ -1,8 +1,19 @@
-use std::io;
-use std::io::Write;
-use std::fmt;
-use std::env;
+/*
+For now this will be a mini version that only solves games from the start
+
+possible updates in the future:
+allow player to play solitaire too
+allow solving from any valid state mid game
+allow importing mid game states from a txt file
+*/
+use std::collections::BinaryHeap;
 use std::collections::HashMap;
+use std::cmp::Ordering;
+use std::env;
+use std::fmt;
+use std::fs::File;
+use std::io;
+use std::io::BufRead;
 
 // constants
 const SUITS: [char; 4] = ['D', 'S', 'H', 'C'];
@@ -10,14 +21,14 @@ const RANKS: [char; 13] = ['A', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J'
 const REDS: &str = "DH";
 const BLACKS: &str = "SC";
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 struct Card
 {
     suit: char,
     rank: char
 }
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq)]
 struct FreecellBoard
 {
     pockets: Vec<Card>,
@@ -26,10 +37,11 @@ struct FreecellBoard
     moves_history: Vec<String>
 }
 
-struct SolitairePlayer
+#[derive(Clone, Eq, PartialEq)]
+struct GameState
 {
     board: FreecellBoard,
-    heuristic: i32
+    heuristic: usize
 }
 
 fn get_alpha(index: usize) -> char
@@ -40,7 +52,7 @@ fn get_alpha(index: usize) -> char
 
 fn get_index(alpha: char) -> usize
 {
-    let mut index = match alpha {
+    let index = match alpha {
         'A' => 0,
         'B' => 1,
         'C' => 2,
@@ -69,22 +81,35 @@ fn is_ordered(front_card: &Card, back_card: &Card) -> bool
     return index_a == index_b + 1;
 }
 
-fn is_valid(front_card: Card, back_card: Card) -> bool
+fn is_valid(front_card: &Card, back_card: &Card) -> bool
 {
     return is_opposite(&front_card, &back_card) && is_ordered(&front_card, &back_card);
-}
-
-impl fmt::Display for Card {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
-    {
-        return write!(f, "{}{}", self.suit, self.rank);
-    }
 }
 
 impl fmt::Debug for Card {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
     {        
         return write!(f, "{}{}", self.suit, self.rank);
+    }
+}
+
+// The priority queue depends on `Ord`.
+// Explicitly implement the trait so the queue becomes a min-heap
+// instead of a max-heap.
+impl Ord for GameState {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Notice that we flip the ordering on costs.
+        // In case of a tie we compare positions - this step is necessary
+        // to make implementations of `PartialEq` and `Ord` consistent.
+        other.heuristic.cmp(&self.heuristic)
+            .then_with(|| self.heuristic.cmp(&other.heuristic))
+    }
+}
+
+// `PartialOrd` needs to be implemented as well.
+impl PartialOrd for GameState {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -166,7 +191,7 @@ impl FreecellBoard
         {
             for i in 0..row.len() - 1
             {
-                if !is_valid(row[i], row[i + 1])
+                if !is_ordered(&row[i], &row[i + 1])
                 {
                     unordered_pairs += 1;
                 }
@@ -191,7 +216,7 @@ impl FreecellBoard
 
     fn reached_win(&self) -> bool
     {
-        return self.get_heuristic() == 0
+        return self.get_heuristic() <= 52
     }
 
     fn move_card_pile_to_pile(&mut self, start_row: usize, end_row: usize)
@@ -253,14 +278,21 @@ impl FreecellBoard
         for i in 0..self.pockets.len() // pocket to foundation
         {
             let pocket_card = self.pockets[i];
-            let foundation_card = Card
+            if pocket_card.rank == 'A'
             {
-                suit: pocket_card.suit,
-                rank: self.foundations[&pocket_card.suit] // TODO: confirm this works ok for '-'
-            };
-            if is_ordered(&pocket_card, &foundation_card)
+                valid_moves.push(get_alpha(i).to_string() + "~E"); // Aces are always valid
+            }
+            else
             {
-                valid_moves.push(get_alpha(i).to_string() + "~E");
+                let foundation_card = Card
+                {
+                    suit: pocket_card.suit,
+                    rank: self.foundations[&pocket_card.suit] // TODO: confirm this works ok for '-'
+                };
+                if is_ordered(&pocket_card, &foundation_card)
+                {
+                    valid_moves.push(get_alpha(i).to_string() + "~E");
+                }
             }
         }
 
@@ -269,6 +301,11 @@ impl FreecellBoard
             if self.piles[i].len() > 0 // card exists
             {
                 let pile_card = self.piles[i].last().unwrap();
+                if pile_card.rank == 'A'
+                {
+                    valid_moves.push(i.to_string() + "~E"); // Aces are always valid
+                }
+
                 let foundation_card = Card
                 {
                     suit: pile_card.suit,
@@ -287,7 +324,7 @@ impl FreecellBoard
             {
                 if self.piles[i].len() > 0 // card exists in this column
                 {
-                    valid_moves.push(i.to_string() + "~" + get_alpha(&self.pockets.len()).to_string());
+                    valid_moves.push(i.to_string() + "~" + &get_alpha(self.pockets.len()).to_string());
                 }
             }
         }
@@ -300,7 +337,7 @@ impl FreecellBoard
                 {
                     if self.piles[j].len() > 0 // card exists in this column
                     {
-                        valid_moves.push(j.to_string() + "~" &i.to_string());
+                        valid_moves.push(j.to_string() + "~" + &i.to_string());
                     }
                 }
                 for j in 0..self.pockets.len()
@@ -312,16 +349,18 @@ impl FreecellBoard
             {
                 for j in 0..self.pockets.len() // pocket to pile
                 {
-                    if is_ordered(&self.pockets[j], &self.piles[i].last())
+                    if is_valid(&self.pockets[j], &self.piles[i].last().unwrap())
                     {
                         valid_moves.push(get_alpha(j).to_string() + "~" + &i.to_string());
                     }
                 }
                 for j in 0..8 // pile to pile, must be different columns that both have cards that are valid
                 {
-                    if i != j && self.piles[j].len() > 0 && is_ordered(&self.pile[j].last(), &self.pile[i].last())
+                    if  i != j &&
+                        self.piles[j].len() > 0
+                        && is_valid(&self.piles[j].last().unwrap(), &self.piles[i].last().unwrap())
                     {
-                        valid_moves.push(j.to_string() + "~" &i.to_string());
+                        valid_moves.push(j.to_string() + "~" + &i.to_string());
                     }
                 }
             }
@@ -331,40 +370,161 @@ impl FreecellBoard
     }
 }
 
+fn get_board_from_file(file_path: &str) -> Result<FreecellBoard, io::Error>
+{
+    // This example demonstrates the principle for Copy types, not directly for String
+    // const EMPTY_STRING: String = String::new(); // This would not compile as String is not Copy
+    // let mut string_array: [String; 5] = [EMPTY_STRING; 5];
+    let mut all_piles: [Vec<Card>; 8] =
+    [
+        Vec::new(),
+        Vec::new(),
+        Vec::new(),
+        Vec::new(),
+        Vec::new(),
+        Vec::new(),
+        Vec::new(),
+        Vec::new()
+    ];
+
+    let file = File::open(file_path)?;
+    let reader = io::BufReader::new(file);
+
+    for (i, line) in reader.lines().enumerate()
+    {
+        if i > 7
+        {
+            break;
+        }
+
+        let tio = line?.clone();
+
+        let cards: Vec<&str> = tio.split_whitespace().collect();
+        let tangible: Vec<String> = cards.iter().map(|&x| x.into()).collect();
+        for card in tangible.iter()
+        {
+            let value = Card
+            {
+                suit: card.chars().nth(0).unwrap(),
+                rank: card.chars().nth(1).unwrap() // fix this and look over it again :(
+            };
+            all_piles[i].push(value);
+        }
+    }
+
+    let mut starting_foundations: HashMap<char, char> = HashMap::new();
+
+    starting_foundations.insert('D', '-');
+    starting_foundations.insert('S', '-');
+    starting_foundations.insert('H', '-');
+    starting_foundations.insert('C', '-');
+
+    return Ok(FreecellBoard
+    {
+        pockets: Vec::<Card>::new(),
+        piles: all_piles,
+        foundations: starting_foundations,
+        moves_history: Vec::<String>::new()
+    })
+}
+
+fn handle_card_move(game_state: GameState, move_notation: String) -> GameState
+{
+    // consider parameter validators
+    let mut updated_game = game_state.board.clone();
+
+    // parse move
+    let start_char = move_notation.chars().next().unwrap();
+    let end_char = move_notation.chars().last().unwrap();
+
+    // pick move accordingly
+    if end_char == 'E'
+    {
+        if start_char.is_alphabetic()
+        {
+            updated_game.push_pocket_to_foundation(get_index(start_char));
+        }
+        else
+        {
+            updated_game.push_pile_to_foundation(start_char.to_digit(10).unwrap() as usize);
+        }
+    }
+    else if start_char.is_alphabetic()
+    {
+        updated_game.move_card_pocket_to_pile(get_index(start_char), end_char.to_digit(10).unwrap() as usize);
+    }
+    else if end_char.is_alphabetic()
+    {
+        updated_game.move_card_pile_to_pocket(start_char.to_digit(10).unwrap() as usize);
+    }
+    else
+    {
+        updated_game.move_card_pile_to_pile(start_char.to_digit(10).unwrap() as usize, end_char.to_digit(10).unwrap() as usize);
+    }
+
+    return GameState
+    {
+        board: updated_game.clone(),
+        heuristic: updated_game.get_heuristic()
+    }
+}
+
+fn show_solution_for(game_board: FreecellBoard)
+{
+    let start = GameState
+    {
+        board: game_board.clone(),
+        heuristic: game_board.get_heuristic()
+    };
+
+    // using A* algorithm without recursion
+    let mut priority_queue: BinaryHeap<GameState> = BinaryHeap::new();
+    priority_queue.push(start.clone());
+
+    while !priority_queue.is_empty()
+    {
+        let current_game_state = priority_queue.pop().unwrap();
+
+        if current_game_state.board.reached_win()
+        {
+            println!("celebrate! {:?}", current_game_state.board.moves_history);
+            current_game_state.board.print_full_board();
+            return;
+        }
+        else
+        {
+            for valid_card_move in current_game_state.board.get_all_valid_moves()
+            {
+                println!("{}", valid_card_move);
+                let new_game_state = handle_card_move(current_game_state.clone(), valid_card_move);
+                priority_queue.push(new_game_state.clone());
+            }
+        }
+    }
+
+    println!("No solutions found.");
+}
+
 fn main()
 {
     let args: Vec<String> = env::args().collect();
+    let mut game: FreecellBoard = FreecellBoard::new();
 
     if args.len() > 1
     {
         let file_path = &args[1];
-        println!("{}", file_path.to_string());
-
-        // setup board ( txt file )
+        match get_board_from_file(file_path)
+        {
+            Ok(result) => game = result,
+            Err(e) => eprintln!("Error reading file: {}", e),
+        }
     }
     else
     {
-        println!("hmmm");
-
-        // setup board
+        println!("Using a default board for game.");
     }
 
-    loop
-    {
-        print!("> ");
-        io::stdout().flush().unwrap();
+    game.print_full_board();
 
-        let mut player_input = String::new();
-
-        io::stdin().read_line(&mut player_input).expect("Failed to read line");
-            // if valid move call Move()
-
-            // if keyword solve call Solve()
-
-            // if keywork quit or game solved, break loop
-        break;
-    }
-
-    // my_array.iter().any(|&x| x == search_item)
-    // let rank_a = front_card.chars().nth(1).expect("front card must have format SR");
+    show_solution_for(game);
 }
