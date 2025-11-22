@@ -9,17 +9,15 @@ use std::io::BufRead;
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct FreeCellBoard {
-    pockets: Vec<FreeCellCard>,
-    piles: [Vec<FreeCellCard>; 8],
-    foundations: [FreeCellCard; 4],
-    moves_history: Vec<String>
+    pub pockets: Vec<FreeCellCard>,
+    pub piles: [Vec<FreeCellCard>; 8],
+    pub foundations: [FreeCellCard; 4],
+    pub moves_history: Vec<String>
 }
 
 impl FreeCellBoard {
     pub fn new() -> Self {
-        let mut full_deck: Vec<FreeCellCard> = Vec::new();
-
-        let mut all_piles: [Vec<FreeCellCard>; 8] = [
+        let all_piles: [Vec<FreeCellCard>; 8] = [
             Vec::new(),
             Vec::new(),
             Vec::new(),
@@ -30,7 +28,7 @@ impl FreeCellBoard {
             Vec::new()
         ];
 
-        let mut starting_foundations: [FreeCellCard; 4] = [
+        let starting_foundations: [FreeCellCard; 4] = [
             FreeCellCard { suit: 'S', rank: '-' },
             FreeCellCard { suit: 'H', rank: '-' },
             FreeCellCard { suit: 'D', rank: '-' },
@@ -55,11 +53,12 @@ impl FreeCellBoard {
 
     pub fn get_heuristic(&self) -> usize {
         let mut unordered_pairs = 0;
-        for row in self.piles.iter() {
-            for (i, card) in row[..row.len() - 1].iter().enumerate() {
-                if is_unordered(&row[i], &row[i + 1]) { // has a card on top that doesnt match order
-                    println!("{} greater than {}", row[i], row[i + 1]);
-                    unordered_pairs += 1;
+        for i in 0..8 {
+            if !self.piles[i].is_empty() {
+                for j in 0..self.piles[i].len() - 1 {
+                    if is_unordered(&self.piles[i][j], &self.piles[i][j + 1]) { // has a card on top that doesnt match order
+                        unordered_pairs += 1;
+                    }
                 }
             }
         }
@@ -70,17 +69,13 @@ impl FreeCellBoard {
             let rank_index = RANKS.iter().position(|&r| r == foundation_card.rank); // 3 mean -2 etc.
 
             if rank_index.is_some() {
-                println!("here is {}", rank_index.unwrap());
                 foundation_cards += rank_index.unwrap();
             }
         }
 
-        // heuristic is totalcards + outofordercards - cardsinfoundation
-        return 52 + unordered_pairs - foundation_cards;
-    }
-
-    pub fn reached_win(&self) -> bool {
-        return self.get_heuristic() <= 40
+        // heuristic is h (how many cards left on board) + g (how many moves to get here)
+        // return 104 - (2*foundation_cards) + unordered_pairs + self.moves_history.len();
+        return 52 - foundation_cards + unordered_pairs + self.moves_history.len();
     }
 
     fn move_card_pile_to_pile(&mut self, start_row: usize, end_row: usize) {
@@ -89,8 +84,6 @@ impl FreeCellBoard {
 
         let move_card = self.piles[start_row].pop().expect("No cards found in pile!");
         self.piles[end_row].push(move_card);
-
-        //self.moves_history.push(start_row.to_string() + "~" + &end_row.to_string());
     }
 
     fn move_card_pile_to_pocket(&mut self, start_row: usize) { // free cells are vec so we don't need the index
@@ -98,8 +91,6 @@ impl FreeCellBoard {
 
         let move_card = self.piles[start_row].pop().expect("No cards found in pile!");
         self.pockets.push(move_card);
-        
-        //self.moves_history.push(start_row.to_string() + "~" + &get_alpha(self.pockets.len()).to_string());
     }
 
     fn move_card_pocket_to_pile(&mut self, start_pos: usize, end_row: usize) {
@@ -108,8 +99,6 @@ impl FreeCellBoard {
 
         let move_card = self.pockets.remove(start_pos);
         self.piles[end_row].push(move_card);
-
-        //self.moves_history.push(get_alpha(start_pos).to_string() + "~" + &end_row.to_string());
     }
     
     fn push_pile_to_foundation(&mut self, start_row: usize, end_pos: usize) {
@@ -117,8 +106,6 @@ impl FreeCellBoard {
 
         let move_card = self.piles[start_row].pop().expect("No cards found in pile!");
         self.foundations[end_pos] = move_card;
-
-        //self.moves_history.push(start_row.to_string() + "~E");
     }
 
     fn push_pocket_to_foundation(&mut self, start_pos: usize, end_pos: usize) {
@@ -126,30 +113,19 @@ impl FreeCellBoard {
         
         let move_card = self.pockets.remove(start_pos);
         self.foundations[end_pos] = move_card;
-        
-        //self.moves_history.push(get_alpha(start_pos).to_string() + "~E");
     }
 
-    pub fn handle_card_move(mut self, card_move: FreeCellMove) {
+    pub fn handle_card_move(&mut self, card_move: FreeCellMove) {
         match &card_move.category {
             MoveCategory::FreecellToFoundation => self.push_pocket_to_foundation(card_move.start_index, card_move.end_index),
             MoveCategory::CascadeToFoundation => self.push_pile_to_foundation(card_move.start_index, card_move.end_index),
             MoveCategory::FreecellToCascade => self.move_card_pocket_to_pile(card_move.start_index, card_move.end_index),
             MoveCategory::CascadeToFreecell => self.move_card_pile_to_pocket(card_move.start_index),
-            MoveCategory::CascadeToCascade => self.move_card_pile_to_pile(card_move.start_index, card_move.end_index),
-            _ => panic!("Category not found!")
+            MoveCategory::CascadeToCascade => self.move_card_pile_to_pile(card_move.start_index, card_move.end_index)
         }
+        
+        self.moves_history.push(card_move.to_string());
     }
-}
-
-pub fn get_all_valid_moves(board: &FreeCellBoard) -> Vec<FreeCellMove> {
-    let mut valid_moves: Vec<FreeCellMove> = Vec::new();
-    valid_moves.push(FreeCellMove {
-        start_index: 0,
-        end_index: 0,
-        category: MoveCategory::FreecellToCascade
-    });
-    return valid_moves;
 }
 
 pub fn get_board_from_file(file_path: &str) -> Result<FreeCellBoard, io::Error> {

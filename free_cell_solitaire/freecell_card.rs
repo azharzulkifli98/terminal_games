@@ -5,7 +5,6 @@ Implements card behaviors
 use std::fmt;
 
 // constants
-pub static SUITS: [char; 4] = ['S', 'H', 'D', 'C'];
 pub static RANKS: [char; 15] = ['-', 'A', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', '+'];
 static REDS: &str = "DH";
 static BLACKS: &str = "SC";
@@ -28,22 +27,6 @@ pub struct FreeCellMove {
     pub start_index: usize,
     pub end_index: usize,
     pub category: MoveCategory
-}
-
-fn get_alpha(index: usize) -> char {
-    let mapping = ['A', 'B', 'C', 'D'];
-    return mapping[index];
-}
-
-fn get_index(alpha: char) -> usize {
-    let index = match alpha {
-        'A' => 0,
-        'B' => 1,
-        'C' => 2,
-        'D' => 3,
-        _ => panic!("Cannot convert to an index")
-    };
-    return index;
 }
 
 fn is_opposite(front_card: &FreeCellCard, back_card: &FreeCellCard) -> bool {
@@ -72,17 +55,15 @@ pub fn is_unordered(front_card: &FreeCellCard, back_card: &FreeCellCard) -> bool
     return index_a > index_b;
 }
 
-pub fn is_valid(front_card: &FreeCellCard, back_card: &FreeCellCard) -> bool {
+pub fn is_foundation_valid(front_card: &FreeCellCard, back_card: &FreeCellCard) -> bool {
+    return front_card.suit == back_card.suit && is_rank_up(&front_card, &back_card); 
+}
+
+pub fn is_cascade_valid(front_card: &FreeCellCard, back_card: &FreeCellCard) -> bool {
     return is_opposite(&front_card, &back_card) && is_rank_up(&back_card, &front_card); // order is reversed for cascades
 }
 
 impl fmt::Debug for FreeCellCard {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        return write!(f, "{}{}", self.suit, self.rank);
-    }
-}
-
-impl fmt::Display for FreeCellCard {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         return write!(f, "{}{}", self.suit, self.rank);
     }
@@ -95,8 +76,7 @@ impl fmt::Debug for FreeCellMove {
             MoveCategory::CascadeToFoundation => return write!(f, "{}~FD", self.start_index),
             MoveCategory::FreecellToCascade => return write!(f, "FC~{}", self.end_index),
             MoveCategory::CascadeToFreecell => return write!(f, "{}~FC", self.start_index),
-            MoveCategory::CascadeToCascade => write!(f, "{}~{}", self.start_index, self.end_index),
-            _ => panic!("category not found!")
+            MoveCategory::CascadeToCascade => write!(f, "{}~{}", self.start_index, self.end_index)
         }
     }
 }
@@ -108,8 +88,7 @@ impl fmt::Display for FreeCellMove {
             MoveCategory::CascadeToFoundation => return write!(f, "{}~FD", self.start_index),
             MoveCategory::FreecellToCascade => return write!(f, "FC~{}", self.end_index),
             MoveCategory::CascadeToFreecell => return write!(f, "{}~FC", self.start_index),
-            MoveCategory::CascadeToCascade => write!(f, "{}~{}", self.start_index, self.end_index),
-            _ => panic!("category not found!")
+            MoveCategory::CascadeToCascade => write!(f, "{}~{}", self.start_index, self.end_index)
         }
     }
 }
